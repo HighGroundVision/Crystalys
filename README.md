@@ -20,7 +20,8 @@ GNUv2 see the LICENSE file.
 
 ## Help
 
-If you have any questions, you can find us in the at @HighGroundVision
+If you have any questions, you can find us in the at [HGV Facebook Group](http://www.facebook.com/groups/1079291435444419/
+)
 
 ## Authors and Acknowledgements
 
