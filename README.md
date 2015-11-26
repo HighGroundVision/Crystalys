@@ -2,7 +2,7 @@
 
 **Build Status Placeholder**
 
-Uses [SteamKit2](https://github.com/SteamRE/SteamKit) to interoperate with Valve's Steam network. Its primay function is to download match replays. Other features maybe added in the future.
+Uses [SteamKit2](https://github.com/SteamRE/SteamKit) to interoperate with Valve's Steam network. Its primay function is to download DOTA2 match replays. Other features maybe added in the future.
 
 **Project Status:**
 
