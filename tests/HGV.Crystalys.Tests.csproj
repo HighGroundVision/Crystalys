@@ -72,7 +72,7 @@
     <Compile Include="TimeoutTest.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\src\HGV.Crystalys.csproj">
+    <ProjectReference Include="..\src\HGV.Crystalys.csproj">
       <Project>{9d44853f-acf8-422c-9f51-406c1a0d6a5f}</Project>
       <Name>HGV.Crystalys</Name>
     </ProjectReference>

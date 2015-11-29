@@ -5,7 +5,7 @@ VisualStudioVersion = 14.0.23107.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HGV.Crystalys", "src\HGV.Crystalys.csproj", "{9D44853F-ACF8-422C-9F51-406C1A0D6A5F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HGV.Crystalys.Tests", "tests\HGV.Crystalys.Tests\HGV.Crystalys.Tests.csproj", "{704EE443-EA53-4AF6-A56D-757E34F9C86D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HGV.Crystalys.Tests", "tests\HGV.Crystalys.Tests.csproj", "{704EE443-EA53-4AF6-A56D-757E34F9C86D}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
