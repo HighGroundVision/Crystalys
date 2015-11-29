@@ -1,6 +1,6 @@
 # Steam DOTA2 Client
 
-**Build Status Placeholder**
+[![highgroundvision MyGet Build Status](https://www.myget.org/BuildSource/Badge/highgroundvision?identifier=bcc46394-8ef3-41bd-b5b9-655e13bfbf21)](https://www.myget.org/)
 
 Uses [SteamKit2](https://github.com/SteamRE/SteamKit) to interoperate with Valve's Steam network. Its primay function is to download DOTA2 match replays. Other features maybe added in the future.
 
