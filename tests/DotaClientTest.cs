@@ -49,7 +49,7 @@ namespace HGV.Crystalys.Tests
 						Trace.TraceError("Unable to logon to Steam: {0}", e.Result);
 				};
 				client.OnAccountLogonDenied += (o, e) => {
-					Trace.TraceInformation("Auth code sent to the email at {0} is required. Regenerate Sentry File Hash.", e.EmailDomain);
+					Trace.TraceInformation("Auth code sent to the email at {0}@{1} is required. Regenerate Sentry File Hash.", this.Username, e.EmailDomain);
 				};
 				client.OnLoggedOff += (o, e) => {
 					Trace.TraceInformation("Logged off of Steam");
