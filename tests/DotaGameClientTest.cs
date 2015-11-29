@@ -11,7 +11,7 @@ using Xunit;
 
 namespace HGV.Crystalys.Tests
 {
-	public class DotaClientTest
+	public class DotaGameClientTest
 	{
 		private string Username = "Thantsking";
 		private string Password = "aPhan3sah";
@@ -24,7 +24,7 @@ namespace HGV.Crystalys.Tests
 			// if we have a saved sentry file, read 
 			byte[] sentryFile = File.ReadAllBytes("sentry.bin");
 
-			using (var client = new DotaClient(this.Username, this.Password, sentryFile))
+			using (var client = new DotaGameClient(this.Username, this.Password, sentryFile))
 			{
 				client.OnConnected += (o, e) => {
 					if(e.Result)

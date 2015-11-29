@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace HGV.Crystalys
 {
-	public class DotaClient : IDisposable
+	public class DotaGameClient : IDisposable
 	{
 		#region Properties
 
@@ -38,7 +38,7 @@ namespace HGV.Crystalys
 
 		#region Constructor
 
-		public DotaClient(string user, string password, byte[] sentry)
+		public DotaGameClient(string user, string password, byte[] sentry)
 		{
 			this.GCMessageHandlers = new Dictionary<uint, Action<IPacketGCMsg>>();
 
@@ -104,7 +104,7 @@ namespace HGV.Crystalys
 		#region Events
 
 		public event ConnectedCallbackHandler OnConnected;
-		public delegate void ConnectedCallbackHandler(DotaClient obj, ConnectedEventArgs e);
+		public delegate void ConnectedCallbackHandler(DotaGameClient obj, ConnectedEventArgs e);
 
 		void ConnectedCallback(SteamClient.ConnectedCallback callback)
 		{
@@ -128,7 +128,7 @@ namespace HGV.Crystalys
 		}
 
 		public event DisconnectedCallbackHandler OnDisconnected;
-		public delegate void DisconnectedCallbackHandler(DotaClient obj, DisconnectedEventArgs e);
+		public delegate void DisconnectedCallbackHandler(DotaGameClient obj, DisconnectedEventArgs e);
 
 		void DisconnectedCallback(SteamClient.DisconnectedCallback callback)
 		{
@@ -146,10 +146,10 @@ namespace HGV.Crystalys
 		}
 
 		public event LoggedOnbackHandler OnLoggedOn;
-		public delegate void LoggedOnbackHandler(DotaClient obj, LoggedOnEventArgs e);
+		public delegate void LoggedOnbackHandler(DotaGameClient obj, LoggedOnEventArgs e);
 
 		public event AccountLogonDeniedHandler OnAccountLogonDenied;
-		public delegate void AccountLogonDeniedHandler(DotaClient obj, AccountLogonDeniedEventArgs e);
+		public delegate void AccountLogonDeniedHandler(DotaGameClient obj, AccountLogonDeniedEventArgs e);
 
 		void LoggedOnCallback(SteamUser.LoggedOnCallback callback)
 		{
@@ -191,7 +191,7 @@ namespace HGV.Crystalys
 		}
 
 		public event LoggedOffHandler OnLoggedOff;
-		public delegate void LoggedOffHandler(DotaClient obj, EventArgs e);
+		public delegate void LoggedOffHandler(DotaGameClient obj, EventArgs e);
 
 		void LoggedOffCallback(SteamUser.LoggedOffCallback callback)
 		{
@@ -216,7 +216,7 @@ namespace HGV.Crystalys
 		}
 
 		public event ClientWelcomeHandler OnClientWelcome;
-		public delegate void ClientWelcomeHandler(DotaClient obj, ClientWelcomeEventArgs e);
+		public delegate void ClientWelcomeHandler(DotaGameClient obj, ClientWelcomeEventArgs e);
 
 		void ClientWelcomeCallback(IPacketGCMsg packet)
 		{
