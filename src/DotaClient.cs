@@ -267,8 +267,6 @@ namespace HGV.Crystalys
 			if (matchDetails == null)
 				throw new ArgumentNullException(nameof(matchDetails));
 
-			//"http://replay" + matchDetails.cluster + ".valve.net/" + APPID + "/" + matchDetails.match_id + "_" + matchDetails.replay_salt + ".dem.bz2";
-
 			var url = string.Format("http://replay{0}.valve.net/{1}/{2}_{3}.dem.bz2", matchDetails.cluster, APPID, matchDetails.match_id, matchDetails.replay_salt);
 			var webClient = new WebClient();
 			var compressedMatchData = webClient.DownloadData(url);

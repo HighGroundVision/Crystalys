@@ -13,11 +13,6 @@ namespace HGV.Crystalys.Tests
 {
 	public class DotaClientTest
 	{
-		// Mollie Burton
-		// thantsking@outlook.com
-		// "Thantsking" / "aPhan3sah"
-		// 1962101529
-
 		private string Username = "Thantsking";
 		private string Password = "aPhan3sah";
 
