@@ -18,7 +18,7 @@ You can now download this project as a NuGet package through [MyGet](https://www
 
 ## License
 
-GNUv2 see the LICENSE file.
+See the LICENSE file.
 
 ## Help
 
