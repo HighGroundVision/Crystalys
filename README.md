@@ -1,4 +1,4 @@
-# Steam DOTA2 Client
+# DOTA2 Game Client
 
 [![highgroundvision MyGet Build Status](https://www.myget.org/BuildSource/Badge/highgroundvision?identifier=bcc46394-8ef3-41bd-b5b9-655e13bfbf21)](https://www.myget.org/feed/highgroundvision/package/nuget/HGV.Crystalys)
 
