@@ -13,22 +13,18 @@ namespace HGV.Crystalys.Tests
 {
 	public class DotaGameClientTest
 	{
-		private string Username = "Thantsking";
-		private string Password = "aPhan3sah";
 
 		[Fact]
-		public void ConnectToSteam()
+		public async Task ConnectToSteam()
 		{
-			Assert.True(File.Exists("sentry.bin"));
+			var service = new HGV.Radiance.SteamUserService();
+			var userInfo = await service.GetNextAvailable();
 
-			// if we have a saved sentry file, read 
-			byte[] sentryFile = File.ReadAllBytes("sentry.bin");
-
-			using (var client = new DotaGameClient(this.Username, this.Password, sentryFile))
+			using (var client = new DotaGameClient(userInfo.Username, userInfo.Password, userInfo.Sentry))
 			{
 				client.OnConnected += (o, e) => {
 					if(e.Result)
-						Trace.TraceInformation("Connected to Steam, Logging in '{0}'", this.Username);
+						Trace.TraceInformation("Connected to Steam, Logging in '{0}'", userInfo.Username);
 					else
 						Trace.TraceError("Unable to connect to Steam");
 				};
@@ -44,7 +40,7 @@ namespace HGV.Crystalys.Tests
 						Trace.TraceError("Unable to logon to Steam: {0}", e.Result);
 				};
 				client.OnAccountLogonDenied += (o, e) => {
-					Trace.TraceInformation("Auth code sent to the email at {0}@{1} is required. Regenerate Sentry File Hash.", this.Username, e.EmailDomain);
+					Trace.TraceInformation("Auth code sent to the email at {0}@{1} is required. Regenerate Sentry File Hash.", userInfo.Username, e.EmailDomain);
 				};
 				client.OnLoggedOff += (o, e) => {
 					Trace.TraceInformation("Logged off of Steam");
@@ -55,8 +51,7 @@ namespace HGV.Crystalys.Tests
 
 				client.Connect(TimeSpan.FromMinutes(1));
 
-				var data = client.DownloadReplay(1962101529, TimeSpan.FromMinutes(1));
-
+				var data = client.DownloadReplay(2115905708, TimeSpan.FromMinutes(1));
 				Assert.NotEqual(0, data.Length);
 			}
         }
