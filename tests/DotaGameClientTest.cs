@@ -49,9 +49,9 @@ namespace HGV.Crystalys.Tests
 					Trace.TraceInformation("GC is welcoming us. Version: {0}", e.Message.version);
 				};
 
-				client.Connect(TimeSpan.FromMinutes(1));
+				client.Connect();
 
-				var data = client.DownloadReplay(2115905708, TimeSpan.FromMinutes(1));
+				var data = client.DownloadReplay(2115905708);
 				Assert.NotEqual(0, data.Length);
 			}
         }

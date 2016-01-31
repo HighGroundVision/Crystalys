@@ -75,7 +75,7 @@ namespace HGV.Crystalys
 
 		public void Connect()
 		{
-			this.Connect(TimeSpan.FromSeconds(10));
+			this.Connect(TimeSpan.FromSeconds(60));
 		}
 
 		public void Connect(TimeSpan timeout)
@@ -138,7 +138,7 @@ namespace HGV.Crystalys
 				this.OnDisconnected(this, args);
 				if(args.Reconnect == true)
 				{
-					Thread.Sleep(TimeSpan.FromSeconds(5));
+					Thread.Sleep(TimeSpan.FromSeconds(1));
 					this.Client.Connect();
 				}
 
@@ -168,7 +168,7 @@ namespace HGV.Crystalys
 				this.Client.Send(gameMsg);
 
 				// delay a little to give steam some time to establish a GC connection to us
-				Thread.Sleep(5000);
+				Thread.Sleep(TimeSpan.FromSeconds(1));
 
 				// inform the dota GC that we want a session
 				var helloMsg = new ClientGCMsgProtobuf<CMsgClientHello>((uint)EGCBaseClientMsg.k_EMsgGCClientHello);
@@ -231,6 +231,11 @@ namespace HGV.Crystalys
 		#endregion
 
 		#region DOTA Functions
+
+		public byte[] DownloadReplay(long matchId)
+		{
+			return DownloadReplay(matchId, TimeSpan.FromSeconds(60));
+		}
 
 		public byte[] DownloadReplay(long matchId, TimeSpan timeout)
 		{
