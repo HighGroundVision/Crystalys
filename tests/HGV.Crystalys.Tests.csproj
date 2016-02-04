@@ -82,7 +82,6 @@
   <ItemGroup>
     <Compile Include="DotaGameClientTest.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TimeoutTest.cs" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\src\HGV.Crystalys.csproj">
