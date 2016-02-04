@@ -47,9 +47,9 @@ namespace HGV.Crystalys
 
 		#region Connect / Disconnect
 
-		public Task Connect(bool autoReconect = true)
+		public Task<uint> Connect(bool autoReconect = true)
 		{
-			return Task.Run(() => {
+			return Task.Run<uint>(() => {
 				bool? completed = null;
 				uint version = 0;
 
@@ -75,7 +75,6 @@ namespace HGV.Crystalys
 					}
 					else
 					{
-						//connected = false;
 						throw new Exception("Failed to Connect");
 					}
 				});
@@ -113,12 +112,10 @@ namespace HGV.Crystalys
 					}
 					else if (callback.Result == EResult.AccountLogonDenied)
 					{
-						//connected = false;
 						throw new Exception(string.Format("Account {0}@{1} is denied.", this.Username, callback.EmailDomain));
 					}
 					else
 					{
-						//connected = false;
 						throw new Exception("Failed to Login.");
 					}
 				});
@@ -149,6 +146,8 @@ namespace HGV.Crystalys
 				
 				if(completed == false)
 					throw new Exception("Failed to Connect");
+
+				return version;
 			});
 		}
 
@@ -161,18 +160,18 @@ namespace HGV.Crystalys
 
 		#region DOTA Functions
 
-		public Task<byte[]> DownloadReplay(long matchId)
+		public Task<byte[]> DownloadReplay(ulong matchId)
 		{
 			return Task.Run<byte[]>(() =>
 			{
+				CMsgDOTAMatch matchDetails = null;
+
 				// get the GC handler, which is used for messaging DOTA
 				var gcHandler = this.SteamClient.GetHandler<SteamGameCoordinator>();
 
 				// register a few callbacks we're interested in
 				var cbManager = new CallbackManager(this.SteamClient);
-
-				CMsgDOTAMatch matchDetails = null;
-
+				
 				cbManager.Subscribe<SteamGameCoordinator.MessageCallback>((SteamGameCoordinator.MessageCallback callback) =>
 				{
 					if (callback.EMsg == (uint)EDOTAGCMsg.k_EMsgGCMatchDetailsResponse)
@@ -184,7 +183,7 @@ namespace HGV.Crystalys
 
 				// Send Request
 				var request = new ClientGCMsgProtobuf<CMsgGCMatchDetailsRequest>((uint)EDOTAGCMsg.k_EMsgGCMatchDetailsRequest);
-				request.Body.match_id = (ulong)matchId;
+				request.Body.match_id = matchId;
 				gcHandler.Send(request, APPID);
 
 				while (matchDetails == null)
