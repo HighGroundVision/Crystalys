@@ -7,8 +7,7 @@ Uses [SteamKit2](https://github.com/SteamRE/SteamKit) to interoperate with Valve
 **Project Status:**
 
 - Can download match replays. Yippy!
-- Need to move some of the call backs into the request for the replay match so that the client can be used for other functions.
-- Need to add Async support.
+- Async support. Yippy!
 
 ## Getting Started
 
