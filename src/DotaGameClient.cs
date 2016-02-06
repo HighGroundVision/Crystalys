@@ -6,6 +6,7 @@ using SteamKit2.GC.Internal;
 using SteamKit2.Internal;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -45,12 +46,18 @@ namespace HGV.Crystalys
 
 		#endregion
 
-		#region Connect / Disconnect
+		#region Connect
 
-		public Task<uint> Connect(bool autoReconect = true)
+		public Task<uint> Connect()
+		{
+			var token = new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token;
+			return Connect(true, token);
+		}
+
+		public Task<uint> Connect(bool autoReconect, CancellationToken cancellationToken)
 		{
 			return Task.Run<uint>(() => {
-				bool? completed = null;
+				bool completed = false;
 				uint version = 0;
 
 				// get the GC handler, which is used for messaging DOTA
@@ -62,8 +69,12 @@ namespace HGV.Crystalys
 				// these are registered upon creation to a callback manager, 
 				// which will then route the callbacks to the functions specified
 				cbManager.Subscribe<SteamClient.ConnectedCallback>((SteamClient.ConnectedCallback callback) => {
+					cancellationToken.ThrowIfCancellationRequested();
+
 					if (callback.Result == EResult.OK)
 					{
+						Trace.TraceInformation("Connected to Steam, Logging in '{0}'", this.Username);
+
 						// get the steamuser handler, which is used for logging on after successfully connecting
 						var UserHandler = this.SteamClient.GetHandler<SteamUser>();
 						UserHandler.LogOn(new SteamUser.LogOnDetails
@@ -75,21 +86,34 @@ namespace HGV.Crystalys
 					}
 					else
 					{
+						Trace.TraceError("Unable to connect to Steam");
+
 						throw new Exception("Failed to Connect");
 					}
 				});
 
 				cbManager.Subscribe<SteamClient.DisconnectedCallback>((SteamClient.DisconnectedCallback callback) => {
-					// delay a little to give steam some time to finalize the DC
-					Thread.Sleep(TimeSpan.FromSeconds(1));
-					
-					// reconect
-					this.SteamClient.Connect();
+					cancellationToken.ThrowIfCancellationRequested();
+
+					Trace.TraceInformation("Disconnected from Steam.");
+
+					if (autoReconect)
+					{
+						// delay a little to give steam some time to finalize the DC
+						Thread.Sleep(TimeSpan.FromSeconds(1));
+
+						// reconect
+						this.SteamClient.Connect();
+					}
 				});
 
 				cbManager.Subscribe<SteamUser.LoggedOnCallback>((SteamUser.LoggedOnCallback callback) => {
+					cancellationToken.ThrowIfCancellationRequested();
+
 					if (callback.Result == EResult.OK)
 					{
+						Trace.TraceInformation("Successfully logged on!");
+
 						// we've logged into the account
 						// now we need to inform the steam server that we're playing dota (in order to receive GC messages)
 						// steamkit doesn't expose the "play game" message through any handler, so we'll just send the message manually
@@ -112,44 +136,52 @@ namespace HGV.Crystalys
 					}
 					else if (callback.Result == EResult.AccountLogonDenied)
 					{
+						Trace.TraceInformation("Account {0}@{1} is denied.", this.Username, callback.EmailDomain);
+
 						throw new Exception(string.Format("Account {0}@{1} is denied.", this.Username, callback.EmailDomain));
 					}
 					else
 					{
+						Trace.TraceError("Failed to Login; Result {0}", callback.Result);
+
 						throw new Exception("Failed to Login.");
 					}
 				});
 
 				cbManager.Subscribe<SteamGameCoordinator.MessageCallback>((SteamGameCoordinator.MessageCallback callback) =>
 				{
+					cancellationToken.ThrowIfCancellationRequested();
+
 					if (callback.EMsg == (uint)EGCBaseClientMsg.k_EMsgGCClientWelcome)
 					{
 						var msg = new ClientGCMsgProtobuf<CMsgClientWelcome>(callback.Message);
 
 						version = msg.Body.version;
+
+						Trace.TraceInformation("GC - Welcome Message");
+
 						completed = true;
-					}
-					else
-					{
-						completed = false;
 					}
 				});
 
 				// initiate the connection
 				SteamClient.Connect();
 
-				while(!completed.HasValue)
+				while(completed == false)
 				{
+					cancellationToken.ThrowIfCancellationRequested();
+
 					// in order for the callbacks to get routed, they need to be handled by the manager
 					cbManager.RunWaitCallbacks(TimeSpan.FromSeconds(1));
 				}
-				
-				if(completed == false)
-					throw new Exception("Failed to Connect");
 
 				return version;
 			});
 		}
+
+		#endregion
+
+		#region Disconnect
 
 		public void Dispose()
 		{
@@ -162,7 +194,13 @@ namespace HGV.Crystalys
 
 		public Task<byte[]> DownloadReplay(ulong matchId)
 		{
-			return Task.Run<byte[]>(() =>
+			var token = new CancellationTokenSource(TimeSpan.FromMinutes(5)).Token;
+			return DownloadReplay(matchId, token);
+		}
+
+		public async Task<byte[]> DownloadReplay(ulong matchId, CancellationToken cancellationToken)
+		{
+			return await Task.Run<byte[]>(async () =>
 			{
 				CMsgDOTAMatch matchDetails = null;
 
@@ -172,8 +210,10 @@ namespace HGV.Crystalys
 				// register a few callbacks we're interested in
 				var cbManager = new CallbackManager(this.SteamClient);
 				
-				cbManager.Subscribe<SteamGameCoordinator.MessageCallback>((SteamGameCoordinator.MessageCallback callback) =>
+				var sub = cbManager.Subscribe<SteamGameCoordinator.MessageCallback>((SteamGameCoordinator.MessageCallback callback) =>
 				{
+					cancellationToken.ThrowIfCancellationRequested();
+
 					if (callback.EMsg == (uint)EDOTAGCMsg.k_EMsgGCMatchDetailsResponse)
 					{
 						var msg = new ClientGCMsgProtobuf<CMsgGCMatchDetailsResponse>(callback.Message);
@@ -188,18 +228,19 @@ namespace HGV.Crystalys
 
 				while (matchDetails == null)
 				{
+					cancellationToken.ThrowIfCancellationRequested();
+
 					// in order for the callbacks to get routed, they need to be handled by the manager
 					cbManager.RunWaitCallbacks(TimeSpan.FromSeconds(1));
 				}
 
-				if (matchDetails == null)
-					throw new Exception("Failed to DownloadReplay");
-
 				var url = string.Format("http://replay{0}.valve.net/{1}/{2}_{3}.dem.bz2", matchDetails.cluster, APPID, matchDetails.match_id, matchDetails.replay_salt);
 				var webClient = new WebClient();
-				var compressedMatchData = webClient.DownloadData(url);
 
-				return CompressionFactory.BZip2.Decompress(compressedMatchData);
+				var compressedMatchData = await webClient.DownloadDataTaskAsync(url);
+				var uncompressedMatchData = CompressionFactory.BZip2.Decompress(compressedMatchData);
+
+				return uncompressedMatchData;
 			});
 		}
 
