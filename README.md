@@ -13,7 +13,7 @@ Uses [SteamKit2](https://github.com/SteamRE/SteamKit) to interoperate with Valve
 
 To download match replays as byte arrays supply a valid username and password and match id to the clients constructor then call the DownloadReplay method.
 
-You can now download this project as a NuGet package through [MyGet](https://www.myget.org/feed/highgroundvision/package/nuget/HGV.Crystalys). We may move these packages to [Nuget Gallery](https://www.nuget.org/) in the future. 
+You can now download this project as a NuGet package [Nuget Gallery](https://www.nuget.org/packages/HGV.Crystalys/) 
 
 ## License
 
