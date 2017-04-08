@@ -16,8 +16,6 @@ using System.Threading.Tasks;
 
 namespace HGV.Crystalys
 {
-    // https://github.com/SteamRE/SteamKit/blob/master/Samples/5.SteamGuard/Program.cs
-
     public class DotaGameClient : IDisposable
     {
         #region Properties
@@ -49,11 +47,10 @@ namespace HGV.Crystalys
 
         #region Connect
 
-        public Task<uint> Connect(string user, string password, byte[] sentry)
+        public Task<uint> Connect(string user, string password)
         {
             this.Username = user;
             this.Password = password;
-            this.Sentry = CryptoHelper.SHAHash(sentry);
 
             var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
@@ -82,7 +79,6 @@ namespace HGV.Crystalys
                         {
                             Username = this.Username,
                             Password = this.Password,
-                            SentryFileHash = this.Sentry,
                         });
                     }
                     else
