@@ -17,11 +17,12 @@ You can now download this project as a NuGet package [Nuget Gallery](https://www
 
 ### Application Settings
 
-A settings.app.config file should be created in the bin directory.
+A settings.app.config file should be created in the bin directory the following values. 
+Note: These test are not setup for Steam Guard please disable it on the account before running tests.
 ```
 <appSettings>
-    <add key="Steam:Username" value="" />
-    <add key="Steam:Password" value="" />
+	<add key="Steam:Username" value="" />
+	<add key="Steam:Password" value="" />
 	<add key="Dota:MatchId" value="" />
 </appSettings>
 ```
