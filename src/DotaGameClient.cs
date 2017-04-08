@@ -7,6 +7,7 @@ using SteamKit2.Internal;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -15,235 +16,259 @@ using System.Threading.Tasks;
 
 namespace HGV.Crystalys
 {
-	public class DotaGameClient : IDisposable
-	{
-		#region Properties
+    // https://github.com/SteamRE/SteamKit/blob/master/Samples/5.SteamGuard/Program.cs
 
-		const int APPID = 570;
+    public class DotaGameClient : IDisposable
+    {
+        #region Properties
 
-		private SteamClient SteamClient { get; set; }
+        const int APPID = 570;
 
-		private string Username { get; set; }
-		private string Password { get; set; }
-		private byte[] Sentry { get; set; }
+        private SteamClient SteamClient { get; set; }
+        private WebClient WebClient { get; set; }
 
-		#endregion
+        private string Username { get; set; }
+        private string Password { get; set; }
+        private byte[] Sentry { get; set; }
 
-		#region Constructor
+        private bool AutoReconnect { get; set; }
 
-		public DotaGameClient(string user, string password, byte[] sentry)
-		{
-			//this.GCMessageHandlers = new Dictionary<uint, Action<IPacketGCMsg>>();
+        #endregion
 
-			this.Username = user;
-			this.Password = password;
-			this.Sentry = CryptoHelper.SHAHash(sentry); //sha-1 hash it
+        #region Constructor
 
-			// create our steamclient instance
-			this.SteamClient = new SteamClient();
+        public DotaGameClient(bool auto_reconnect = false)
+        {
+            this.AutoReconnect = auto_reconnect;
 
-		}
+            this.WebClient = new WebClient();
+            this.SteamClient = new SteamClient();
+        }
 
-		#endregion
+        #endregion
 
-		#region Connect
+        #region Connect
 
-		public Task<uint> Connect()
-		{
-			var token = new CancellationTokenSource(TimeSpan.FromSeconds(30)).Token;
-			return Connect(true, token);
-		}
+        public Task<uint> Connect(string user, string password, byte[] sentry)
+        {
+            this.Username = user;
+            this.Password = password;
+            this.Sentry = CryptoHelper.SHAHash(sentry);
 
-		public Task<uint> Connect(bool autoReconect, CancellationToken cancellationToken)
-		{
-			return Task.Run<uint>(() => {
-				bool completed = false;
-				uint version = 0;
+            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
-				// get the GC handler, which is used for messaging DOTA
-				var gcHandler = this.SteamClient.GetHandler<SteamGameCoordinator>();
+            Func<uint> HandshakeWithSteam = () =>
+            {
+                bool completed = false;
+                uint version = 0;
 
-				// register a few callbacks we're interested in
-				var cbManager = new CallbackManager(this.SteamClient);
+                // get the GC handler, which is used for messaging DOTA
+                var gcHandler = this.SteamClient.GetHandler<SteamGameCoordinator>();
 
-				// these are registered upon creation to a callback manager, 
-				// which will then route the callbacks to the functions specified
-				cbManager.Subscribe<SteamClient.ConnectedCallback>((SteamClient.ConnectedCallback callback) => {
-					cancellationToken.ThrowIfCancellationRequested();
+                // register a few callbacks we're interested in
+                var cbManager = new CallbackManager(this.SteamClient);
 
-					if (callback.Result == EResult.OK)
-					{
-						Trace.TraceInformation("Connected to Steam, Logging in '{0}'", this.Username);
+                // these are registered upon creation to a callback manager, 
+                // which will then route the callbacks to the functions specified
+                cbManager.Subscribe<SteamClient.ConnectedCallback>((SteamClient.ConnectedCallback callback) =>
+                {
+                    if (callback.Result == EResult.OK)
+                    {
+                        Trace.TraceInformation("Steam: Logging in '{0}'", this.Username);
 
-						// get the steamuser handler, which is used for logging on after successfully connecting
-						var UserHandler = this.SteamClient.GetHandler<SteamUser>();
-						UserHandler.LogOn(new SteamUser.LogOnDetails
-						{
-							Username = this.Username,
-							Password = this.Password,
-							SentryFileHash = this.Sentry,
-						});
-					}
-					else
-					{
-						Trace.TraceError("Unable to connect to Steam");
+                        // get the steamuser handler, which is used for logging on after successfully connecting
+                        var UserHandler = this.SteamClient.GetHandler<SteamUser>();
+                        UserHandler.LogOn(new SteamUser.LogOnDetails
+                        {
+                            Username = this.Username,
+                            Password = this.Password,
+                            SentryFileHash = this.Sentry,
+                        });
+                    }
+                    else
+                    {
+                        var error = Enum.GetName(typeof(EResult), callback.Result);
+                        throw new Exception(string.Format("Failed to Connect. Unknown Error: {0}", error));
+                    }
+                });
 
-						throw new Exception("Failed to Connect");
-					}
-				});
+                cbManager.Subscribe<SteamClient.DisconnectedCallback>((SteamClient.DisconnectedCallback callback) =>
+                {
+                    if (this.AutoReconnect)
+                    {
+                        Trace.TraceInformation("Steam: Disconnected.");
 
-				cbManager.Subscribe<SteamClient.DisconnectedCallback>((SteamClient.DisconnectedCallback callback) => {
-					cancellationToken.ThrowIfCancellationRequested();
+                        // delay a little to give steam some time to finalize the DC
+                        Thread.Sleep(TimeSpan.FromSeconds(10));
 
-					Trace.TraceInformation("Disconnected from Steam.");
+                        // reconect
+                        Trace.TraceInformation("Steam: Reconnecting.");
+                        this.SteamClient.Connect();
+                    }
+                });
 
-					if (autoReconect)
-					{
-						// delay a little to give steam some time to finalize the DC
-						Thread.Sleep(TimeSpan.FromSeconds(1));
+                cbManager.Subscribe<SteamUser.LoggedOnCallback>((SteamUser.LoggedOnCallback callback) =>
+                {
 
-						// reconect
-						this.SteamClient.Connect();
-					}
-				});
+                    if (callback.Result == EResult.OK)
+                    {
+                        Trace.TraceInformation("Steam: LoggedOn");
 
-				cbManager.Subscribe<SteamUser.LoggedOnCallback>((SteamUser.LoggedOnCallback callback) => {
-					cancellationToken.ThrowIfCancellationRequested();
+                        // we've logged into the account
+                        // now we need to inform the steam server that we're playing dota (in order to receive GC messages)
+                        // steamkit doesn't expose the "play game" message through any handler, so we'll just send the message manually
+                        var gameMsg = new ClientMsgProtobuf<CMsgClientGamesPlayed>(EMsg.ClientGamesPlayed);
+                        gameMsg.Body.games_played.Add(new CMsgClientGamesPlayed.GamePlayed { game_id = new GameID(APPID) });
 
-					if (callback.Result == EResult.OK)
-					{
-						Trace.TraceInformation("Successfully logged on!");
+                        // send it off - notice here we're sending this message directly using the SteamClient
+                        this.SteamClient.Send(gameMsg);
 
-						// we've logged into the account
-						// now we need to inform the steam server that we're playing dota (in order to receive GC messages)
-						// steamkit doesn't expose the "play game" message through any handler, so we'll just send the message manually
-						var gameMsg = new ClientMsgProtobuf<CMsgClientGamesPlayed>(EMsg.ClientGamesPlayed);
-						gameMsg.Body.games_played.Add(new CMsgClientGamesPlayed.GamePlayed
-						{
-							game_id = new GameID(APPID), // or game_id = APPID,
-						});
+                        // delay a little to give steam some time to establish a GC connection to us
+                        Thread.Sleep(TimeSpan.FromSeconds(1));
 
-						// send it off - notice here we're sending this message directly using the SteamClient
-						this.SteamClient.Send(gameMsg);
+                        // inform the dota GC that we want a session
+                        var helloMsg = new ClientGCMsgProtobuf<CMsgClientHello>((uint)EGCBaseClientMsg.k_EMsgGCClientHello);
+                        helloMsg.Body.engine = ESourceEngine.k_ESE_Source2;
+                        gcHandler.Send(helloMsg, APPID);
+                    }
+                    else if (callback.Result == EResult.AccountLogonDenied)
+                    {
+                        throw new Exception(string.Format("Steam Guard code required. Use STEAM GUARD to generate sentry."));
+                    }
+                    else if (callback.Result == EResult.AccountLoginDeniedNeedTwoFactor)
+                    {
+                        throw new Exception(string.Format("Two factor code required. Use STEAM GUARD to generate sentry."));
+                    }
+                    else
+                    {
+                        var error = Enum.GetName(typeof(EResult), callback.Result);
+                        throw new Exception(string.Format("Failed to Login. Unknown Error: {0}", error));
+                    }
+                });
 
-						// delay a little to give steam some time to establish a GC connection to us
-						Thread.Sleep(TimeSpan.FromSeconds(1));
+                cbManager.Subscribe<SteamGameCoordinator.MessageCallback>((SteamGameCoordinator.MessageCallback callback) =>
+                {
+                    if (callback.EMsg == (uint)EGCBaseClientMsg.k_EMsgGCClientWelcome)
+                    {
+                        var msg = new ClientGCMsgProtobuf<CMsgClientWelcome>(callback.Message);
 
-						// inform the dota GC that we want a session
-						var helloMsg = new ClientGCMsgProtobuf<CMsgClientHello>((uint)EGCBaseClientMsg.k_EMsgGCClientHello);
-						helloMsg.Body.engine = ESourceEngine.k_ESE_Source2;
-						gcHandler.Send(helloMsg, APPID);
-					}
-					else if (callback.Result == EResult.AccountLogonDenied)
-					{
-						Trace.TraceInformation("Account {0}@{1} is denied.", this.Username, callback.EmailDomain);
+                        version = msg.Body.version;
 
-						throw new Exception(string.Format("Account {0}@{1} is denied.", this.Username, callback.EmailDomain));
-					}
-					else
-					{
-						Trace.TraceError("Failed to Login; Result {0}", callback.Result);
+                        Trace.TraceInformation("Dota: GC Welcome");
 
-						throw new Exception("Failed to Login.");
-					}
-				});
+                        completed = true;
+                    }
+                });
 
-				cbManager.Subscribe<SteamGameCoordinator.MessageCallback>((SteamGameCoordinator.MessageCallback callback) =>
-				{
-					cancellationToken.ThrowIfCancellationRequested();
+                // initiate the connection
+                SteamClient.Connect();
 
-					if (callback.EMsg == (uint)EGCBaseClientMsg.k_EMsgGCClientWelcome)
-					{
-						var msg = new ClientGCMsgProtobuf<CMsgClientWelcome>(callback.Message);
+                while (completed == false)
+                {
+                    // in order for the callbacks to get routed, they need to be handled by the manager
+                    cbManager.RunWaitCallbacks(TimeSpan.FromSeconds(1));
+                }
 
-						version = msg.Body.version;
+                return version;
+            };
 
-						Trace.TraceInformation("GC - Welcome Message");
+            return Task.Run<uint>(HandshakeWithSteam, guardian.Token);
+        }
 
-						completed = true;
-					}
-				});
+        #endregion
 
-				// initiate the connection
-				SteamClient.Connect();
+        #region Disconnect
 
-				while(completed == false)
-				{
-					cancellationToken.ThrowIfCancellationRequested();
+        public void Dispose()
+        {
+            if(this.WebClient != null)
+            {
+                this.WebClient.Dispose();
+                this.WebClient = null;
+            }
 
-					// in order for the callbacks to get routed, they need to be handled by the manager
-					cbManager.RunWaitCallbacks(TimeSpan.FromSeconds(1));
-				}
+            if (this.SteamClient != null)
+            {
+                this.SteamClient.Disconnect();
+                this.SteamClient = null;
+            }
+        }
 
-				return version;
-			});
-		}
+        #endregion
 
-		#endregion
+        #region DOTA Functions
 
-		#region Disconnect
+        public async Task<CMsgDOTAMatch> DownloadMatchData(ulong matchId)
+        {
+            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
-		public void Dispose()
-		{
-			SteamClient.Disconnect();
-		}
+            Func<CMsgDOTAMatch> RequestMatchDetails = () =>
+            {
+                CMsgDOTAMatch matchDetails = null;
 
-		#endregion
+                // get the GC handler, which is used for messaging DOTA
+                var gcHandler = this.SteamClient.GetHandler<SteamGameCoordinator>();
 
-		#region DOTA Functions
+                // register a few callbacks we're interested in
+                var cbManager = new CallbackManager(this.SteamClient);
 
-		public Task<byte[]> DownloadReplay(ulong matchId)
-		{
-			var token = new CancellationTokenSource(TimeSpan.FromMinutes(5)).Token;
-			return DownloadReplay(matchId, token);
-		}
+                var sub = cbManager.Subscribe<SteamGameCoordinator.MessageCallback>((SteamGameCoordinator.MessageCallback callback) =>
+                {
+                    if (callback.EMsg == (uint)EDOTAGCMsg.k_EMsgGCMatchDetailsResponse)
+                    {
+                        Trace.TraceInformation("Dota: Match Data");
 
-		public async Task<byte[]> DownloadReplay(ulong matchId, CancellationToken cancellationToken)
-		{
-			return await Task.Run<byte[]>(async () =>
-			{
-				CMsgDOTAMatch matchDetails = null;
+                        var msg = new ClientGCMsgProtobuf<CMsgGCMatchDetailsResponse>(callback.Message);
+                        matchDetails = msg.Body.match;
+                    }
+                });
 
-				// get the GC handler, which is used for messaging DOTA
-				var gcHandler = this.SteamClient.GetHandler<SteamGameCoordinator>();
+                // Send Request
+                var request = new ClientGCMsgProtobuf<CMsgGCMatchDetailsRequest>((uint)EDOTAGCMsg.k_EMsgGCMatchDetailsRequest);
+                request.Body.match_id = matchId;
+                gcHandler.Send(request, APPID);
 
-				// register a few callbacks we're interested in
-				var cbManager = new CallbackManager(this.SteamClient);
-				
-				var sub = cbManager.Subscribe<SteamGameCoordinator.MessageCallback>((SteamGameCoordinator.MessageCallback callback) =>
-				{
-					cancellationToken.ThrowIfCancellationRequested();
+                while (matchDetails == null)
+                {
+                    // in order for the callbacks to get routed, they need to be handled by the manager
+                    cbManager.RunWaitCallbacks(TimeSpan.FromSeconds(1));
+                }
 
-					if (callback.EMsg == (uint)EDOTAGCMsg.k_EMsgGCMatchDetailsResponse)
-					{
-						var msg = new ClientGCMsgProtobuf<CMsgGCMatchDetailsResponse>(callback.Message);
-						matchDetails = msg.Body.match;
-					}
-				});
+                return matchDetails;
+            };
 
-				// Send Request
-				var request = new ClientGCMsgProtobuf<CMsgGCMatchDetailsRequest>((uint)EDOTAGCMsg.k_EMsgGCMatchDetailsRequest);
-				request.Body.match_id = matchId;
-				gcHandler.Send(request, APPID);
+            return await Task.Run<CMsgDOTAMatch>(RequestMatchDetails, guardian.Token);
+        }
 
-				while (matchDetails == null)
-				{
-					cancellationToken.ThrowIfCancellationRequested();
+        public async Task<byte[]> DownloadReplay(ulong matchId)
+        {
+            var matchDetails = await DownloadMatchData(matchId);
+            var data = await DownloadData(matchDetails, "dem");
+            return data;
+        }
 
-					// in order for the callbacks to get routed, they need to be handled by the manager
-					cbManager.RunWaitCallbacks(TimeSpan.FromSeconds(1));
-				}
+        public async Task<CDOTAMatchMetadata> DownloadMeta(ulong matchId)
+        {
+            var matchDetails = await DownloadMatchData(matchId);
+            var data = await DownloadData(matchDetails, "meta");
 
-				var url = string.Format("http://replay{0}.valve.net/{1}/{2}_{3}.dem.bz2", matchDetails.cluster, APPID, matchDetails.match_id, matchDetails.replay_salt);
-				var webClient = new WebClient();
+            using (var steam = new MemoryStream(data))
+            {
+                var meta = ProtoBuf.Serializer.Deserialize<CDOTAMatchMetadataFile>(steam);
+                return meta.metadata;
+            }
+        }
 
-				var compressedMatchData = await webClient.DownloadDataTaskAsync(url);
-				var uncompressedMatchData = CompressionFactory.BZip2.Decompress(compressedMatchData);
+        private async Task<byte[]> DownloadData(CMsgDOTAMatch matchDetails, string type)
+        {
+            var url = string.Format("http://replay{0}.valve.net/{1}/{2}_{3}.{4}.bz2", matchDetails.cluster, APPID, matchDetails.match_id, matchDetails.replay_salt, type);
+            
+            var compressedMatchData = await this.WebClient.DownloadDataTaskAsync(url);
+            var uncompressedMatchData = CompressionFactory.BZip2.Decompress(compressedMatchData);
 
-				return uncompressedMatchData;
-			});
-		}
+            return uncompressedMatchData;
+        }
 
-		#endregion
-	}
+        #endregion
+    }
 }

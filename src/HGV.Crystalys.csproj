@@ -30,6 +30,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=10.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.10.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
     <Reference Include="Noemax.Compression.Net4.Trial, Version=15.325.0.0, Culture=neutral, PublicKeyToken=4c0defa954f97f18, processorArchitecture=MSIL">
       <HintPath>..\packages\Noemax.Compression.15.325.0\lib\net40\Noemax.Compression.Net4.Trial.dll</HintPath>
       <Private>True</Private>
@@ -54,7 +57,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DotaGameClient.cs" />
-    <Compile Include="EventArgs.cs" />
+    <Compile Include="MatchMetadata.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
