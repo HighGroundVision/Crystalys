@@ -15,6 +15,17 @@ To download match replays as byte arrays supply a valid username and password an
 
 You can now download this project as a NuGet package [Nuget Gallery](https://www.nuget.org/packages/HGV.Crystalys/) 
 
+### Application Settings
+
+A settings.app.config file should be created in the bin directory.
+```
+<appSettings>
+    <add key="Steam:Username" value="" />
+    <add key="Steam:Password" value="" />
+	<add key="Dota:MatchId" value="" />
+</appSettings>
+```
+
 ## License
 
 See the LICENSE file.
