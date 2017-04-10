@@ -22,10 +22,10 @@ namespace HGV.Crystalys.Tests
             };
         }
 
-        private ulong GetMatchId()
+        private long GetMatchId()
         {
             var value = ConfigurationManager.AppSettings["Dota:MatchId"];
-            return ulong.Parse(value);
+            return long.Parse(value);
         }
 
 		[Fact]

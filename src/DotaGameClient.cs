@@ -194,7 +194,7 @@ namespace HGV.Crystalys
 
         #region DOTA Functions
 
-        public async Task<CMsgDOTAMatch> DownloadMatchData(ulong matchId)
+        public async Task<CMsgDOTAMatch> DownloadMatchData(long matchId)
         {
             var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
@@ -221,7 +221,7 @@ namespace HGV.Crystalys
 
                 // Send Request
                 var request = new ClientGCMsgProtobuf<CMsgGCMatchDetailsRequest>((uint)EDOTAGCMsg.k_EMsgGCMatchDetailsRequest);
-                request.Body.match_id = matchId;
+                request.Body.match_id = (ulong)matchId;
                 gcHandler.Send(request, APPID);
 
                 while (matchDetails == null)
@@ -236,14 +236,14 @@ namespace HGV.Crystalys
             return await Task.Run<CMsgDOTAMatch>(RequestMatchDetails, guardian.Token);
         }
 
-        public async Task<byte[]> DownloadReplay(ulong matchId)
+        public async Task<byte[]> DownloadReplay(long matchId)
         {
             var matchDetails = await DownloadMatchData(matchId);
             var data = await DownloadData(matchDetails, "dem");
             return data;
         }
 
-        public async Task<CDOTAMatchMetadata> DownloadMeta(ulong matchId)
+        public async Task<CDOTAMatchMetadata> DownloadMeta(long matchId)
         {
             var matchDetails = await DownloadMatchData(matchId);
             var data = await DownloadData(matchDetails, "meta");
