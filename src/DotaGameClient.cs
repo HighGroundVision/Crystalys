@@ -236,17 +236,29 @@ namespace HGV.Crystalys
             return await Task.Run<CMsgDOTAMatch>(RequestMatchDetails, guardian.Token);
         }
 
-        public async Task<byte[]> DownloadReplay(long matchId)
+        public async Task<byte[]> DownloadReplay(long matchId, int? cluster = null, int? salt = null)
         {
-            var matchDetails = await DownloadMatchData(matchId);
-            var data = await DownloadData(matchDetails, "dem");
+            if (!cluster.HasValue || !salt.HasValue)
+            {
+                var matchDetails = await DownloadMatchData(matchId);
+                cluster = (int)matchDetails.cluster;
+                salt = (int)matchDetails.replay_salt;
+            }
+
+            var data = await DownloadData((uint)cluster.GetValueOrDefault(), (ulong)matchId, (uint)salt.GetValueOrDefault(), "dem");
             return data;
         }
 
-        public async Task<CDOTAMatchMetadata> DownloadMeta(long matchId)
+        public async Task<CDOTAMatchMetadata> DownloadMeta(long matchId, int? cluster = null, int? salt = null)
         {
-            var matchDetails = await DownloadMatchData(matchId);
-            var data = await DownloadData(matchDetails, "meta");
+            if(!cluster.HasValue || !salt.HasValue)
+            {
+                var matchDetails = await DownloadMatchData(matchId);
+                cluster = (int)matchDetails.cluster;
+                salt = (int)matchDetails.replay_salt;
+            }
+            
+            var data = await DownloadData((uint)cluster.GetValueOrDefault(), (ulong)matchId, (uint)salt.GetValueOrDefault(), "meta");
 
             using (var steam = new MemoryStream(data))
             {
@@ -255,9 +267,9 @@ namespace HGV.Crystalys
             }
         }
 
-        private async Task<byte[]> DownloadData(CMsgDOTAMatch matchDetails, string type)
+        private async Task<byte[]> DownloadData(uint cluster, ulong match_id, uint replay_salt, string type)
         {
-            var url = string.Format("http://replay{0}.valve.net/{1}/{2}_{3}.{4}.bz2", matchDetails.cluster, APPID, matchDetails.match_id, matchDetails.replay_salt, type);
+            var url = string.Format("http://replay{0}.valve.net/{1}/{2}_{3}.{4}.bz2", cluster, APPID, match_id, replay_salt, type);
             
             var compressedMatchData = await this.WebClient.DownloadDataTaskAsync(url);
             var uncompressedMatchData = CompressionFactory.BZip2.Decompress(compressedMatchData);
