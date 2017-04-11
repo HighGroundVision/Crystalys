@@ -29,15 +29,15 @@ namespace HGV.Crystalys
         private string Password { get; set; }
         private byte[] Sentry { get; set; }
 
-        private bool AutoReconnect { get; set; }
+        private int Timeout { get; set; }
 
         #endregion
 
         #region Constructor
 
-        public DotaGameClient(bool auto_reconnect = false)
+        public DotaGameClient(int timeout_seconds = 30)
         {
-            this.AutoReconnect = auto_reconnect;
+            this.Timeout = timeout_seconds;
 
             this.WebClient = new WebClient();
             this.SteamClient = new SteamClient();
@@ -52,11 +52,14 @@ namespace HGV.Crystalys
             this.Username = user;
             this.Password = password;
 
-            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(this.Timeout));
 
             Func<uint> HandshakeWithSteam = () =>
             {
+                Trace.TraceInformation("Steam: Begin Handshake");
+
                 bool completed = false;
+                EResult error = EResult.OK;
                 uint version = 0;
 
                 // get the GC handler, which is used for messaging DOTA
@@ -83,24 +86,21 @@ namespace HGV.Crystalys
                     }
                     else
                     {
-                        var error = Enum.GetName(typeof(EResult), callback.Result);
-                        throw new Exception(string.Format("Failed to Connect. Unknown Error: {0}", error));
+                        Trace.TraceInformation("Failed to Connect. Unknown Error: {0}", Enum.GetName(typeof(EResult), callback.Result));
+                        error = callback.Result;
                     }
                 });
 
                 cbManager.Subscribe<SteamClient.DisconnectedCallback>((SteamClient.DisconnectedCallback callback) =>
                 {
-                    if (this.AutoReconnect)
-                    {
-                        Trace.TraceInformation("Steam: Disconnected.");
+                    Trace.TraceInformation("Steam: Disconnected.");
 
-                        // delay a little to give steam some time to finalize the DC
-                        Thread.Sleep(TimeSpan.FromSeconds(1));
+                    // delay a little to give steam some time to finalize the DC
+                    Thread.Sleep(TimeSpan.FromSeconds(5));
 
-                        // reconect
-                        Trace.TraceInformation("Steam: Reconnecting.");
-                        this.SteamClient.Connect();
-                    }
+                    // reconect
+                    Trace.TraceInformation("Steam: Reconnecting.");
+                    this.SteamClient.Connect();
                 });
 
                 cbManager.Subscribe<SteamUser.LoggedOnCallback>((SteamUser.LoggedOnCallback callback) =>
@@ -126,18 +126,25 @@ namespace HGV.Crystalys
                         helloMsg.Body.engine = ESourceEngine.k_ESE_Source2;
                         gcHandler.Send(helloMsg, APPID);
                     }
+                    else if (callback.Result == SteamKit2.EResult.TryAnotherCM)
+                    {
+                        Thread.Sleep(TimeSpan.FromSeconds(5));
+                        SteamClient.Connect();
+                    }
                     else if (callback.Result == EResult.AccountLogonDenied)
                     {
-                        throw new Exception(string.Format("Steam Guard code required. Use STEAM GUARD to generate sentry."));
+                        Trace.TraceInformation("Steam Guard code required. Use STEAM GUARD to generate sentry.");
+                        error = callback.Result;
                     }
                     else if (callback.Result == EResult.AccountLoginDeniedNeedTwoFactor)
                     {
-                        throw new Exception(string.Format("Two factor code required. Use STEAM GUARD to generate sentry."));
+                        Trace.TraceInformation("Two factor code required. Use STEAM GUARD to generate sentry.");
+                        error = callback.Result;
                     }
                     else
                     {
-                        var error = Enum.GetName(typeof(EResult), callback.Result);
-                        throw new Exception(string.Format("Failed to Login. Unknown Error: {0}", error));
+                        Trace.TraceInformation("Failed to Connect. Unknown Error: {0}", Enum.GetName(typeof(EResult), callback.Result));
+                        error = callback.Result;
                     }
                 });
 
@@ -155,19 +162,26 @@ namespace HGV.Crystalys
                     }
                 });
 
+                Trace.TraceInformation("Steam: Connect");
+
+                
                 // initiate the connection
                 SteamClient.Connect();
 
-                while (completed == false)
+                while (completed == false && error == EResult.OK)
                 {
                     guardian.Token.ThrowIfCancellationRequested();
 
                     // in order for the callbacks to get routed, they need to be handled by the manager
                     cbManager.RunWaitCallbacks(TimeSpan.FromSeconds(1));
+
+                    Trace.TraceInformation("Steam: Waiting on callbacks.");
                 }
 
                 return version;
             };
+
+            await SteamDirectory.Initialize();
 
             return await Task.Run<uint>(HandshakeWithSteam, guardian.Token);
         }
@@ -197,7 +211,7 @@ namespace HGV.Crystalys
 
         public async Task<CMsgDOTAMatch> DownloadMatchData(long matchId)
         {
-            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(this.Timeout));
 
             Func<CMsgDOTAMatch> RequestMatchDetails = () =>
             {
