@@ -196,12 +196,6 @@ namespace HGV.Crystalys
 
         public void Dispose()
         {
-            if(this.WebClient != null)
-            {
-                this.WebClient.Dispose();
-                this.WebClient = null;
-            }
-
             if (this.SteamClient != null)
             {
                 this.SteamClient.Disconnect();
