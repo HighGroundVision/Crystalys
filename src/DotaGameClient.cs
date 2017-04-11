@@ -95,7 +95,7 @@ namespace HGV.Crystalys
                         Trace.TraceInformation("Steam: Disconnected.");
 
                         // delay a little to give steam some time to finalize the DC
-                        Thread.Sleep(TimeSpan.FromSeconds(10));
+                        Thread.Sleep(TimeSpan.FromSeconds(1));
 
                         // reconect
                         Trace.TraceInformation("Steam: Reconnecting.");
@@ -197,7 +197,7 @@ namespace HGV.Crystalys
 
         public async Task<CMsgDOTAMatch> DownloadMatchData(long matchId)
         {
-            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
             Func<CMsgDOTAMatch> RequestMatchDetails = () =>
             {
