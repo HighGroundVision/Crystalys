@@ -53,7 +53,7 @@ namespace HGV.Crystalys
             this.Username = user;
             this.Password = password;
 
-            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
             Func<uint> HandshakeWithSteam = () =>
             {
@@ -185,7 +185,7 @@ namespace HGV.Crystalys
 
         public async Task Disconnect()
         {
-            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(60));
 
             this.AutoReconnect = false;
 
@@ -219,7 +219,7 @@ namespace HGV.Crystalys
 
         public async Task<CMsgDOTAMatch> DownloadMatchData(long matchId)
         {
-            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(30));
 
             Func<CMsgDOTAMatch> RequestMatchDetails = () =>
             {
