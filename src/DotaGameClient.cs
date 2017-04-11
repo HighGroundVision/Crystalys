@@ -180,6 +180,11 @@ namespace HGV.Crystalys
                     cbManager.RunWaitCallbacks(TimeSpan.FromSeconds(1));
                 }
 
+                if(error != EResult.OK)
+                {
+                    throw new Exception(string.Format("Unhandled Error: {0}", Enum.GetName(typeof(EResult), error)));
+                }
+
                 return version;
             };
 
