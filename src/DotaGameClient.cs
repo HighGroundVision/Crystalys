@@ -160,6 +160,10 @@ namespace HGV.Crystalys
 
                         completed = true;
                     }
+                    else
+                    {
+                        Trace.TraceInformation("Unknown Msg: {0}", Enum.GetName(typeof(EGCBaseClientMsg), callback.EMsg));
+                    }
                 });
 
                 Trace.TraceInformation("Steam: Connect");
@@ -174,8 +178,6 @@ namespace HGV.Crystalys
 
                     // in order for the callbacks to get routed, they need to be handled by the manager
                     cbManager.RunWaitCallbacks(TimeSpan.FromSeconds(1));
-
-                    Trace.TraceInformation("Steam: Waiting on callbacks.");
                 }
 
                 return version;
