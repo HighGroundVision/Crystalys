@@ -162,7 +162,7 @@ namespace HGV.Crystalys
                     }
                     else
                     {
-                        Trace.TraceInformation("Unknown Msg: {0}", Enum.GetName(typeof(EGCBaseClientMsg), callback.EMsg));
+                        Trace.TraceInformation("Unknown Msg: {0}", callback.EMsg);
                     }
                 });
 
