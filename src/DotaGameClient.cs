@@ -190,8 +190,8 @@ namespace HGV.Crystalys
             this.AutoReconnect = false;
 
             this.SteamClient.Disconnect();
-
-            while (this.Connected == false)
+           
+            while (this.Connected == true)
             {
                 guardian.Token.ThrowIfCancellationRequested();
                 await Task.Delay(TimeSpan.FromSeconds(1));
