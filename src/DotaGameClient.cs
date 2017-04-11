@@ -86,7 +86,7 @@ namespace HGV.Crystalys
                     }
                     else
                     {
-                        Trace.TraceInformation("Failed to Connect. Unknown Error: {0}", Enum.GetName(typeof(EResult), callback.Result));
+                        Trace.TraceInformation("Steam: Failed to Connect. Unknown Error '{0}'", Enum.GetName(typeof(EResult), callback.Result));
                         error = callback.Result;
                     }
                 });
@@ -133,17 +133,17 @@ namespace HGV.Crystalys
                     }
                     else if (callback.Result == EResult.AccountLogonDenied)
                     {
-                        Trace.TraceInformation("Steam Guard code required. Use STEAM GUARD to generate sentry.");
+                        Trace.TraceInformation("Steam: Guard code required. Use STEAM GUARD to generate sentry.");
                         error = callback.Result;
                     }
                     else if (callback.Result == EResult.AccountLoginDeniedNeedTwoFactor)
                     {
-                        Trace.TraceInformation("Two factor code required. Use STEAM GUARD to generate sentry.");
+                        Trace.TraceInformation("Steam: Two factor code required. Use STEAM GUARD to generate sentry.");
                         error = callback.Result;
                     }
                     else
                     {
-                        Trace.TraceInformation("Failed to Connect. Unknown Error: {0}", Enum.GetName(typeof(EResult), callback.Result));
+                        Trace.TraceInformation("Steam: Failed to Connect. Unknown Error '{0}'", Enum.GetName(typeof(EResult), callback.Result));
                         error = callback.Result;
                     }
                 });
@@ -162,7 +162,7 @@ namespace HGV.Crystalys
                     }
                     else
                     {
-                        Trace.TraceInformation("Unknown Msg: {0}", callback.EMsg);
+                        Trace.TraceInformation("Dota: Unknown Msg '{0}'", callback.EMsg);
                     }
                 });
 
