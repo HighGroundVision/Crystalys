@@ -30,7 +30,6 @@ namespace HGV.Crystalys
         private byte[] Sentry { get; set; }
 
         private bool AutoReconnect { get; set; }
-        private bool Connected { get; set; }
 
         #endregion
 
@@ -53,7 +52,7 @@ namespace HGV.Crystalys
             this.Username = user;
             this.Password = password;
 
-            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
             Func<uint> HandshakeWithSteam = () =>
             {
@@ -101,10 +100,6 @@ namespace HGV.Crystalys
                         // reconect
                         Trace.TraceInformation("Steam: Reconnecting.");
                         this.SteamClient.Connect();
-                    }
-                    else
-                    {
-                        this.Connected = false;
                     }
                 });
 
@@ -171,8 +166,6 @@ namespace HGV.Crystalys
                     cbManager.RunWaitCallbacks(TimeSpan.FromSeconds(1));
                 }
 
-                this.Connected = true;
-
                 return version;
             };
 
@@ -182,21 +175,6 @@ namespace HGV.Crystalys
         #endregion
 
         #region Disconnect
-
-        public async Task Disconnect()
-        {
-            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(60));
-
-            this.AutoReconnect = false;
-
-            this.SteamClient.Disconnect();
-           
-            while (this.Connected == true)
-            {
-                guardian.Token.ThrowIfCancellationRequested();
-                await Task.Delay(TimeSpan.FromSeconds(1));
-            }
-        }
 
         public void Dispose()
         {
