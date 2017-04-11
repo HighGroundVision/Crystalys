@@ -30,6 +30,7 @@ namespace HGV.Crystalys
         private byte[] Sentry { get; set; }
 
         private bool AutoReconnect { get; set; }
+        private bool Connected { get; set; }
 
         #endregion
 
@@ -47,12 +48,12 @@ namespace HGV.Crystalys
 
         #region Connect
 
-        public Task<uint> Connect(string user, string password)
+        public async Task<uint> Connect(string user, string password)
         {
             this.Username = user;
             this.Password = password;
 
-            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
             Func<uint> HandshakeWithSteam = () =>
             {
@@ -101,11 +102,14 @@ namespace HGV.Crystalys
                         Trace.TraceInformation("Steam: Reconnecting.");
                         this.SteamClient.Connect();
                     }
+                    else
+                    {
+                        this.Connected = false;
+                    }
                 });
 
                 cbManager.Subscribe<SteamUser.LoggedOnCallback>((SteamUser.LoggedOnCallback callback) =>
                 {
-
                     if (callback.Result == EResult.OK)
                     {
                         Trace.TraceInformation("Steam: LoggedOn");
@@ -161,19 +165,38 @@ namespace HGV.Crystalys
 
                 while (completed == false)
                 {
+                    guardian.Token.ThrowIfCancellationRequested();
+
                     // in order for the callbacks to get routed, they need to be handled by the manager
                     cbManager.RunWaitCallbacks(TimeSpan.FromSeconds(1));
                 }
 
+                this.Connected = true;
+
                 return version;
             };
 
-            return Task.Run<uint>(HandshakeWithSteam, guardian.Token);
+            return await Task.Run<uint>(HandshakeWithSteam, guardian.Token);
         }
 
         #endregion
 
         #region Disconnect
+
+        public async Task Disconnect()
+        {
+            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+
+            this.AutoReconnect = false;
+
+            this.SteamClient.Disconnect();
+
+            while (this.Connected == false)
+            {
+                guardian.Token.ThrowIfCancellationRequested();
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+        }
 
         public void Dispose()
         {
@@ -196,7 +219,7 @@ namespace HGV.Crystalys
 
         public async Task<CMsgDOTAMatch> DownloadMatchData(long matchId)
         {
-            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(10));
+            var guardian = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
             Func<CMsgDOTAMatch> RequestMatchDetails = () =>
             {
