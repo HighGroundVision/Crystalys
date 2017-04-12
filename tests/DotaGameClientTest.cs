@@ -27,7 +27,17 @@ namespace HGV.Crystalys.Tests
             return 3111014659;
         }
 
-		[Fact]
+        [Fact]
+        public void Basic()
+        {
+            var userInfo = this.GetUserInfo();
+
+            var client = new DotaGameClient(30);
+            var version = client.Connect(userInfo.Username, userInfo.Password).Result;
+        }
+
+
+        [Fact]
 		public async Task ConnectToSteam()
 		{
             var userInfo = this.GetUserInfo();
