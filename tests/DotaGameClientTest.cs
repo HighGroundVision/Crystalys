@@ -17,28 +17,29 @@ namespace HGV.Crystalys.Tests
         private UserInfo GetUserInfo()
         {
             return new UserInfo() {
-                Username = ConfigurationManager.AppSettings["Steam:Username"],
-                Password = ConfigurationManager.AppSettings["Steam:Password"] 
+                Username = "Thantsking",
+                Password = "aPhan3sah"
             };
         }
 
         private long GetMatchId()
         {
-            var value = ConfigurationManager.AppSettings["Dota:MatchId"];
-            return long.Parse(value);
+            return 3111014659;
         }
 
 		[Fact]
 		public async Task ConnectToSteam()
 		{
             var userInfo = this.GetUserInfo();
+            var matchid = this.GetMatchId();
 
             using (var client = new DotaGameClient())
-			{
+            {
                 await client.Connect(userInfo.Username, userInfo.Password);
             }
         }
 
+        
         [Fact]
         public async Task DownloadMatchData()
         {
@@ -83,6 +84,6 @@ namespace HGV.Crystalys.Tests
                 Assert.NotNull(data);
             }
         }
-
+        
     }
 }

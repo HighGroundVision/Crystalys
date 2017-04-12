@@ -23,7 +23,6 @@ namespace HGV.Crystalys
         const int APPID = 570;
 
         private SteamClient SteamClient { get; set; }
-        private WebClient WebClient { get; set; }
 
         private string Username { get; set; }
         private string Password { get; set; }
@@ -38,8 +37,6 @@ namespace HGV.Crystalys
         public DotaGameClient(int timeout_seconds = 30)
         {
             this.Timeout = timeout_seconds;
-
-            this.WebClient = new WebClient();
             this.SteamClient = new SteamClient();
         }
 
@@ -199,12 +196,6 @@ namespace HGV.Crystalys
 
         public void Dispose()
         {
-            if(this.WebClient != null)
-            {
-                this.WebClient.Dispose();
-                this.WebClient = null;
-            }
-
             if (this.SteamClient != null)
             {
                 this.SteamClient.Disconnect();
@@ -291,12 +282,12 @@ namespace HGV.Crystalys
 
         private async Task<byte[]> DownloadData(uint cluster, ulong match_id, uint replay_salt, string type)
         {
-            var url = string.Format("http://replay{0}.valve.net/{1}/{2}_{3}.{4}.bz2", cluster, APPID, match_id, replay_salt, type);
-            
-            var compressedMatchData = await this.WebClient.DownloadDataTaskAsync(url);
-            var uncompressedMatchData = CompressionFactory.BZip2.Decompress(compressedMatchData);
-
-            return uncompressedMatchData;
+            using (var client = new WebClient())
+            {
+                var url = string.Format("http://replay{0}.valve.net/{1}/{2}_{3}.{4}.bz2", cluster, APPID, match_id, replay_salt, type);
+                var compressedMatchData = await client.DownloadDataTaskAsync(url);
+                return CompressionFactory.BZip2.Decompress(compressedMatchData);
+            }
         }
 
         #endregion
