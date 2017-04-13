@@ -12,8 +12,8 @@ using Xunit;
 
 namespace HGV.Crystalys.Tests
 {
-	public class DotaGameClientTest
-	{
+	public class DotaClientTest
+    {
         private UserInfo GetUserInfo()
         {
             return new UserInfo() {
@@ -33,10 +33,8 @@ namespace HGV.Crystalys.Tests
             var userInfo = this.GetUserInfo();
             var matchid = this.GetMatchId();
 
-            using (var client = new DotaGameClient())
-            {
-                client.Connect(userInfo.Username, userInfo.Password);
-            }
+            var client = new DotaClient(userInfo.Username, userInfo.Password);
+            client.Connect();
         }
 
         
@@ -46,13 +44,11 @@ namespace HGV.Crystalys.Tests
             var userInfo = this.GetUserInfo();
             var matchid = this.GetMatchId();
 
-            using (var client = new DotaGameClient())
-            {
-                client.Connect(userInfo.Username, userInfo.Password);
+            var client = new DotaClient(userInfo.Username, userInfo.Password);
+            client.Connect();
 
-                var data = client.DownloadMatchData(matchid);
-                Assert.NotNull(data);
-            }
+            var data = client.DownloadMatchData(matchid);
+            Assert.NotNull(data);
         }
 
         [Fact]
@@ -61,14 +57,14 @@ namespace HGV.Crystalys.Tests
             var userInfo = this.GetUserInfo();
             var matchid = this.GetMatchId();
 
-            using (var client = new DotaGameClient())
-            {
-                client.Connect(userInfo.Username, userInfo.Password);
+            var client = new DotaClient(userInfo.Username, userInfo.Password);
+            client.Connect();
 
-                var data = client.DownloadMatchData(matchid);
-                var meta = await client.DownloadMeta(matchid, data.cluster, data.replay_salt);
-                Assert.NotNull(data);
-            }
+            var data = client.DownloadMatchData(matchid);
+            Assert.NotNull(data);
+
+            var meta = await client.DownloadMeta(matchid, data.cluster, data.replay_salt);
+            Assert.NotNull(meta);
         }
 
         [Fact]
@@ -77,14 +73,14 @@ namespace HGV.Crystalys.Tests
             var userInfo = this.GetUserInfo();
             var matchid = this.GetMatchId();
 
-            using (var client = new DotaGameClient())
-            {
-                client.Connect(userInfo.Username, userInfo.Password);
+            var client = new DotaClient(userInfo.Username, userInfo.Password);
+            client.Connect();
 
-                var data = client.DownloadMatchData(matchid);
-                var replay = await client.DownloadReplay(matchid, data.cluster, data.replay_salt);
-                Assert.NotNull(data);
-            }
+            var data = client.DownloadMatchData(matchid);
+            Assert.NotNull(data);
+
+            var replay = await client.DownloadReplay(matchid, data.cluster, data.replay_salt);
+            Assert.NotNull(replay);
         }
         
     }
