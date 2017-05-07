@@ -17,14 +17,14 @@ namespace HGV.Crystalys.Tests
         private UserInfo GetUserInfo()
         {
             return new UserInfo() {
-                Username = "Thantsking",
-                Password = "aPhan3sah"
+                Username = ConfigurationManager.AppSettings["Steam:Username"],
+                Password = ConfigurationManager.AppSettings["Steam:Password"]
             };
         }
 
         private ulong GetMatchId()
         {
-            return 3111014659;
+            return ulong.Parse(ConfigurationManager.AppSettings["Dota:MatchId"]);
         }
 
         [Fact]
@@ -82,6 +82,26 @@ namespace HGV.Crystalys.Tests
             var replay = await client.DownloadReplay(matchid, data.cluster, data.replay_salt);
             Assert.NotNull(replay);
         }
-        
+
+
+        [Fact]
+        public void Test1()
+        {
+            var userInfo = this.GetUserInfo();
+            var matchid = this.GetMatchId();
+
+            var client = new DotaClient(userInfo.Username, userInfo.Password);
+            client.Connect();
+
+            var collection = Enumerable.Range((int)matchid, 100);
+            foreach (ulong id in collection)
+            {
+                var data = client.DownloadMatchData(id);
+                Assert.NotNull(data);
+            }
+
+            Assert.True(matchid != 0);
+        }
+
     }
 }

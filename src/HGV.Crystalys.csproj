@@ -55,7 +55,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DotaClient.cs" />
-    <Compile Include="DotaGameClient.cs" />
     <Compile Include="MatchMetadata.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
