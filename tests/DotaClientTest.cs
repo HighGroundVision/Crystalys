@@ -24,7 +24,7 @@ namespace HGV.Crystalys.Tests
 
         private ulong GetMatchId()
         {
-            return ulong.Parse(ConfigurationManager.AppSettings["Dota:MatchId"]);
+            return 3543452515;
         }
 
         [Fact]
