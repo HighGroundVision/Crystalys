@@ -2,30 +2,19 @@
 
 [![Build Status](https://travis-ci.org/HighGroundVision/Crystalys.svg?branch=master)](https://travis-ci.org/HighGroundVision/Crystalys)
 
-Uses [SteamKit2](https://github.com/SteamRE/SteamKit) to interoperate with Valve's Steam network. Its primay function is to download DOTA2 match replays. Other features maybe added in the future.
+Uses [SteamKit2](https://github.com/SteamRE/SteamKit) to interoperate with Valve's Steam network. Its primary function is to download DOTA2 match replays. Other features maybe added in the future.
 
 **Project Status:**
 
 - Can download match replays. Yippy!
 - Async support. Yippy!
+- End of Match meta-data. Yippy!
 
 ## Getting Started
 
-To download match replays as byte arrays supply a valid username and password and match id to the clients constructor then call the DownloadReplay method.
+To download match replays as byte arrays supply a valid user-name and password and match id to the clients constructor then call the DownloadReplay method.
 
-You can now download this project as a NuGet package through [MyGet](https://www.myget.org/feed/highgroundvision/package/nuget/HGV.Crystalys). We may move these packages to [Nuget Gallery](https://www.nuget.org/) in the future. 
-
-### Application Settings
-
-A settings.app.config file should be created in the bin directory the following values. 
-Note: These test are not setup for Steam Guard please disable it on the account before running tests.
-```
-<appSettings>
-	<add key="Steam:Username" value="" />
-	<add key="Steam:Password" value="" />
-	<add key="Dota:MatchId" value="" />
-</appSettings>
-```
+You can now download this project as a NuGet package through [Nuget Gallery](https://www.nuget.org/packages/HGV.Crystalys/)
 
 ## License
 
@@ -35,7 +24,7 @@ See the LICENSE file.
 
 If you have any questions, you can tweet us at [@DotaHGV](https://twitter.com/DotaHGV)
 
-## Authors and Acknowledgements
+## Authors and Acknowledgments
 
 Crystalys is maintained and development by [HGV](http://www.highgroundvision.com), a leading Dota 2 data visualization and analysis web site. HGV's Team:
 
