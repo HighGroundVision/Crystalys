@@ -1,6 +1,6 @@
 # DOTA2 Game Client
 
-[![Build Status](https://travis-ci.org/HighGroundVision/Crystalys.svg?branch=master)](https://travis-ci.org/HighGroundVision/Crystalys)
+[![Build status](https://ci.appveyor.com/api/projects/status/w4j21tvmftda3npk?svg=true)](https://ci.appveyor.com/project/RGBKnights/basilius)
 
 Uses [SteamKit2](https://github.com/SteamRE/SteamKit) to interoperate with Valve's Steam network. Its primary function is to download DOTA2 match replays. Other features maybe added in the future.
 
