@@ -14,8 +14,6 @@ using SteamKit2.GC.Internal;        // brings the base GC protobuf messages
 using SteamKit2.GC.Dota;            // brings in dota specific things
 using SteamKit2.GC.Dota.Internal;   // brings in dota specific protobuf messages
 
-using Noemax.Compression;
-
 namespace HGV.Crystalys
 {
     public class DotaClient
@@ -70,18 +68,6 @@ namespace HGV.Crystalys
         // called when the client successfully (or unsuccessfully) connects to steam
         void OnConnected(SteamClient.ConnectedCallback callback)
         {
-            if (callback.Result != EResult.OK)
-            {
-                // connection failed (steam servers down, at capacity, etc)
-                // here you would delay your next connection attempt by say 30 seconds
-                // steamkit doesn't automatically reconnect, you have to perform the connection yourself
-
-                Trace.TraceInformation("Unable to connect to Steam: {0}", callback.Result);
-
-                this.connected = false; // we didn't actually get the match details, but we need to jump out of the callback loop
-                return;
-            }
-
             Trace.TraceInformation("Connected! Logging '{0}' into Steam...", userName);
 
             // we've successfully connected, so now attempt to logon
@@ -269,9 +255,13 @@ namespace HGV.Crystalys
         {
             using (var client = new WebClient())
             {
+                
                 var url = string.Format("http://replay{0}.valve.net/{1}/{2}_{3}.{4}.bz2", cluster, APPID, match_id, replay_salt, type);
                 var compressedMatchData = await client.DownloadDataTaskAsync(url);
-                return CompressionFactory.BZip2.Decompress(compressedMatchData);
+                return compressedMatchData;
+
+                //ICSharpCode.SharpZipLib.BZip2.BZip2.Decompress()
+                //return CompressionFactory.BZip2.Decompress(compressedMatchData);
             }
         }
 
