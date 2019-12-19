@@ -27,7 +27,7 @@ namespace HGV.Crystalys.Tests
         }
 
         [TestMethod]
-        public async Task TestMethod2()
+        public void TestMethod2()
         { 
             var provider = new MoqSteamAuthenticationProvider();
             var factory = new MoqHttpClientFactory();
@@ -49,7 +49,7 @@ namespace HGV.Crystalys.Tests
 
             Assert.IsTrue(client.isConnected());
 
-            var meta = await client.DownloadMeta(5160263863);
+            var meta = await client.DownloadMeta(5160997219); // 5160263863
 
             client.Dispose();
         }
