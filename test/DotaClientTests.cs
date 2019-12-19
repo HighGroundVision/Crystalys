@@ -1,5 +1,7 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
+using System;
 using System.Net.Http;
+using System.Threading.Tasks;
 
 namespace HGV.Crystalys.Tests
 {
@@ -25,15 +27,31 @@ namespace HGV.Crystalys.Tests
         }
 
         [TestMethod]
-        public void TestMethod2()
-        {
-            ISteamAuthenticationProvider provider = new MoqSteamAuthenticationProvider();
-            IHttpClientFactory factory = new MoqHttpClientFactory();
-            IDotaClient client = new DotaClient(provider, factory);
+        public async Task TestMethod2()
+        { 
+            var provider = new MoqSteamAuthenticationProvider();
+            var factory = new MoqHttpClientFactory();
+            var client = new DotaClient(provider, factory);
 
             Assert.IsTrue(client.isConnected());
 
-            //var meta = client.DownloadMeta(5160263863);
+            client.Dispose();
+
+            Assert.IsFalse(client.isConnected());
+        }
+
+        [TestMethod]
+        public async Task TestMethod3()
+        {
+            var provider = new MoqSteamAuthenticationProvider();
+            var factory = new MoqHttpClientFactory();
+            var client = new DotaClient(provider, factory);
+
+            Assert.IsTrue(client.isConnected());
+
+            var meta = await client.DownloadMeta(5160263863);
+
+            client.Dispose();
         }
     }
 }
