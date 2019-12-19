@@ -17,7 +17,7 @@ namespace HGV.Crystalys
     public interface IDotaClient
     {
         bool isConnected();
-        Task<Stream> DownloadReplay(ulong matchId);
+        Task<byte[]> DownloadReplay(ulong matchId);
         Task<CDOTAMatchMetadata> DownloadMeta(ulong matchId);
     }
 
@@ -205,10 +205,10 @@ namespace HGV.Crystalys
             }
         }
 
-        private async Task<Stream> DownloadData(ulong match_id, uint cluster, uint replay_salt, string type)
+        private async Task<byte[]> DownloadData(ulong match_id, uint cluster, uint replay_salt, string type)
         {
             var url = string.Format("http://replay{0}.valve.net/{1}/{2}_{3}.{4}.bz2", cluster, APPID, match_id, replay_salt, type);
-            return await httpClient.GetStreamAsync(url);
+            return await httpClient.GetByteArrayAsync(url);
         }
 
         public void Dispose()
@@ -226,23 +226,24 @@ namespace HGV.Crystalys
             return this.steamClient.IsConnected && this.IsSteamConnected && this.IsGCConnected;
         }
 
-        public async Task<Stream> DownloadReplay(ulong matchId)
+        public async Task<byte[]> DownloadReplay(ulong matchId)
         {
             this.FetchMatch(matchId);
 
-            var stream = await DownloadData(this.match.match_id, this.match.cluster, this.match.replay_salt, "dem");
-            return stream;
+            return await DownloadData(this.match.match_id, this.match.cluster, this.match.replay_salt, "dem");
         }
 
         public async Task<CDOTAMatchMetadata> DownloadMeta(ulong matchId)
         {
             this.FetchMatch(matchId);
 
-            var stream = await DownloadData(this.match.match_id, this.match.cluster, this.match.replay_salt, "meta");
-            var meta = ProtoBuf.Serializer.Deserialize<CDOTAMatchMetadataFile>(stream);
-            return meta.metadata;
-        }
+            var data = await DownloadData(this.match.match_id, this.match.cluster, this.match.replay_salt, "meta");
 
-        
+            using (var stream = new MemoryStream(data))
+            {
+                var meta = ProtoBuf.Serializer.Deserialize<CDOTAMatchMetadataFile>(stream);
+                return meta.metadata;
+            }
+        }
     }
 }
