@@ -9,10 +9,17 @@
     <Description>Uses SteamKit2 to interoperate with Valve's Steam network to download DOTA2 match replays and end of match metadata.</Description>
     <Copyright>Venatio Studios 2018</Copyright>
     <PackageProjectUrl>https://github.com/HighGroundVision/Crystalys</PackageProjectUrl>
+    <UserSecretsId>7ef510f0-b3de-4504-b72b-d77b34222679</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="SteamKit2" Version="2.0.0" />
+    <Protobuf Include="**/*.proto" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http" Version="3.0.1" />
+    <PackageReference Include="Polly" Version="7.2.0" />
+    <PackageReference Include="SteamKit2" Version="2.2.0" />
   </ItemGroup>
 
 </Project>
