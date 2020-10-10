@@ -39,19 +39,5 @@ namespace HGV.Crystalys.Tests
 
             Assert.IsFalse(client.isConnected());
         }
-
-        [TestMethod]
-        public async Task TestMethod3()
-        {
-            var provider = new MoqSteamAuthenticationProvider();
-            var factory = new MoqHttpClientFactory();
-            var client = new DotaClient(provider, factory);
-
-            Assert.IsTrue(client.isConnected());
-
-            var meta = await client.DownloadMeta(5160997219); // 5160263863
-
-            client.Dispose();
-        }
     }
 }

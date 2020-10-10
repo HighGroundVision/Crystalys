@@ -6,14 +6,14 @@ namespace HGV.Crystalys.Tests
 {
     public class MoqSteamAuthenticationProvider : ISteamAuthenticationProvider
     {
-        public string GetPassword()
-        {
-            return Environment.GetEnvironmentVariable("SteamPassword");
-        }
-
         public string GetUserName()
         {
-            return Environment.GetEnvironmentVariable("SteamUsername");
+            return Environment.GetEnvironmentVariable("STEAM_USERNAME");
+        }
+
+        public string GetPassword()
+        {
+            return Environment.GetEnvironmentVariable("STEAM_PASSWORD");
         }
     }
 }
