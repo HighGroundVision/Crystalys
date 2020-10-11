@@ -3,13 +3,15 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>1.1.0.0</Version>
+    <Version>1.1.0</Version>
     <Authors>RGBKnights</Authors>
     <Company>High Ground Vision</Company>
     <Description>Uses SteamKit2 to interoperate with Valve's Steam network to download DOTA2 match replays and end of match metadata.</Description>
     <Copyright>Venatio Studios 2018</Copyright>
-    <PackageProjectUrl>https://github.com/HighGroundVision/Crystalys</PackageProjectUrl>
+    <PackageProjectUrl></PackageProjectUrl>
     <UserSecretsId>7ef510f0-b3de-4504-b72b-d77b34222679</UserSecretsId>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryUrl>https://github.com/HighGroundVision/Crystalys</RepositoryUrl>
   </PropertyGroup>
 
   <ItemGroup>
