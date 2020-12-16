@@ -10,16 +10,16 @@ namespace HGV.Crystalys
         string GetPassword();
     }
 
-    public class DefaultSteamAuthenticationProvider : ISteamAuthenticationProvider
+    public class EnvironmentalAuthenticationProvider : ISteamAuthenticationProvider
     {
-        public string GetPassword()
-        {
-            throw new NotImplementedException();
-        }
-
         public string GetUserName()
         {
-            throw new NotImplementedException();
+            return Environment.GetEnvironmentVariable("STEAM_USERNAME");
+        }
+
+        public string GetPassword()
+        {
+            return Environment.GetEnvironmentVariable("STEAM_PASSWORD");
         }
     }
 }
