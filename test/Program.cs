@@ -1,6 +1,7 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Threading.Tasks;
 
@@ -14,14 +15,14 @@ namespace HGV.Crystalys.Tests
                  .UseContentRoot(Directory.GetCurrentDirectory())
                  .ConfigureLogging(logger => 
                  { 
-                     // TOOD: setup logger
+                     // TOOD: ...
                  })
                  .ConfigureAppConfiguration(config =>
                  {
                      config.AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
                      config.AddUserSecrets<Program>();
                      config.AddEnvironmentVariables();
-                     //config.AddCommandLine(args);
+                     config.AddCommandLine(args);
                  })
                  .ConfigureServices((hostContext, services) =>
                  {

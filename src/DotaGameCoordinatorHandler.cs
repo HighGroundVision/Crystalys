@@ -6,10 +6,8 @@ using SteamKit2.Internal;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace HGV.Crystalys
 {
@@ -19,6 +17,7 @@ namespace HGV.Crystalys
     public sealed partial class DotaGameCoordinatorHandler : ClientMsgHandler
     {
         // private readonly Timer _gcConnectTimer;
+        private readonly Timer _gcConnectTimer;
         private bool _running;
 
         public DotaGameCoordinatorHandler(SteamClient client)
@@ -40,19 +39,11 @@ namespace HGV.Crystalys
 
             EconItems = new Dictionary<ulong, CSOEconItem>(300); // Usually we'd have around 200-600 items.
             MapLocationStates = new Dictionary<int, CSODOTAMapLocationState>(2); // Generally this seems to be 2
+            ChatChannels = new List<CMsgDOTAJoinChatChannelResponse>(1); // Lobby
 
-            //var timedout = new TimerCallback(_ =>
-            //{
-            //    if (_running)
-            //    {
-            //        SayHello();
-            //    }
-            //    else
-            //    {
-            //        _gcConnectTimer.Change(0, Timeout.Infinite);
-            //    }
-            //});
-            //_gcConnectTimer = new Timer(timedout, null, 0, Timeout.Infinite);
+            _gcConnectTimer = new Timer(30000);
+            _gcConnectTimer.AutoReset = true;
+            _gcConnectTimer.Elapsed += (s,e) => SayHello();
         }
 
         /// <summary>
@@ -69,15 +60,14 @@ namespace HGV.Crystalys
         /// Is the GC ready?
         /// </summary>
         public bool Ready { get; private set; }
-
         
         /// <summary>
-        ///     The underlying SteamClient.
+        /// The underlying SteamClient.
         /// </summary>
         public SteamClient SteamClient { get; private set; }
 
         /// <summary>
-        ///     The current up to date lobby
+        /// The current up to date lobby
         /// </summary>
         /// <value>The lobby.</value>
         public CSODOTALobby Lobby { get; private set; }
@@ -95,10 +85,15 @@ namespace HGV.Crystalys
         /// <summary>
         /// Contains various information about our player.
         /// </summary>
-        public CSOEconGameAccountClient GameAccountClient { get; set; }
+        public CSOEconGameAccountClient GameAccountClient { get; private set; }
 
         /// <summary>
-        ///     Sends a game coordinator message.
+        /// Active Chat Channels
+        /// </summary>
+        public List<CMsgDOTAJoinChatChannelResponse> ChatChannels { get; private set; }
+
+        /// <summary>
+        /// Sends a game coordinator message.
         /// </summary>
         /// <param name="msg">The GC message to send.</param>
         public void Send(IClientGCMsg msg)
@@ -143,8 +138,6 @@ namespace HGV.Crystalys
             await Task.Delay(TimeSpan.FromSeconds(1));
 
             SayHello();
-
-            //_gcConnectTimer.Change(0, 5000);
         }
 
         private void SayHello()
@@ -351,6 +344,8 @@ namespace HGV.Crystalys
             var leaveChannel = new ClientGCMsgProtobuf<CMsgDOTALeaveChatChannel>((uint)EDOTAGCMsg.k_EMsgGCLeaveChatChannel);
             leaveChannel.Body.channel_id = channelid;
             Send(leaveChannel);
+
+            ChatChannels.RemoveAll(_ => _.channel_id == channelid);
         }
 
         /// <summary>
@@ -562,7 +557,10 @@ namespace HGV.Crystalys
                 var inital = Lobby is null;
                 var lobby = Serializer.Deserialize<CSODOTALobby>(stream);
                 Lobby = lobby;
-                Client.PostCallback(new PracticeLobbySnapshot(lobby, inital));
+
+                if(inital) Client.PostCallback(new PracticeLobbyCreated(lobby));
+
+                Client.PostCallback(new PracticeLobbySnapshot(lobby));
             }
         }
 
@@ -591,6 +589,9 @@ namespace HGV.Crystalys
         private void HandleJoinChatChannelResponse(IPacketGCMsg obj)
         {
             var resp = new ClientGCMsgProtobuf<CMsgDOTAJoinChatChannelResponse>(obj);
+
+            ChatChannels.Add(resp.Body);
+
             Client.PostCallback(new JoinChatChannelResponse(resp.Body));
         }
 
@@ -624,8 +625,7 @@ namespace HGV.Crystalys
 
                 if (resp.Body.status != GCConnectionStatus.GCConnectionStatus_HAVE_SESSION)
                 {
-                    // TODO: Start Timer!
-                    // _gcConnectTimer.Change(0, 5000);
+                    _gcConnectTimer.Start();
                 }                
             }
             else

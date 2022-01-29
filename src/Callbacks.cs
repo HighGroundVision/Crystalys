@@ -432,18 +432,32 @@ namespace HGV.Crystalys
     /// <summary>
     ///     Lobby was updated
     /// </summary>
+    public sealed class PracticeLobbyCreated : CallbackMsg
+    {
+        /// <summary>
+        /// The current lobby.
+        /// </summary>
+        public CSODOTALobby lobby;
+
+        internal PracticeLobbyCreated(CSODOTALobby lobby)
+        {
+            this.lobby = lobby;
+        }
+    }
+
+    /// <summary>
+    ///     Lobby was updated
+    /// </summary>
     public sealed class PracticeLobbySnapshot : CallbackMsg
     {
         /// <summary>
         /// The current lobby.
         /// </summary>
         public CSODOTALobby lobby;
-        public bool initialization;
 
-        internal PracticeLobbySnapshot(CSODOTALobby lobby, bool inital)
+        internal PracticeLobbySnapshot(CSODOTALobby lobby)
         {
             this.lobby = lobby;
-            this.initialization = inital;
         }
     }
 

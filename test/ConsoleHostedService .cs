@@ -7,10 +7,11 @@ using System.Threading;
 using System.Threading.Tasks;
 using SteamKit2;
 using SteamKit2.GC.Dota.Internal;
+using System.Linq;
 
 namespace HGV.Crystalys.Tests
 {
-    internal sealed class ConsoleHostedService : IHostedService
+    internal class ConsoleHostedService : IHostedService
     {
         private readonly ILogger _logger;
         private readonly IHostApplicationLifetime _appLifetime;
@@ -29,7 +30,6 @@ namespace HGV.Crystalys.Tests
         {
             _logger.LogDebug($"Starting with arguments: {string.Join(" ", Environment.GetCommandLineArgs())}");
 
-            //_appLifetime.ApplicationStarted.Register(() => Task.Run(Main));
             _appLifetime.ApplicationStarted.Register(() => Task.Run(Main));
 
             return Task.CompletedTask;
@@ -61,7 +61,18 @@ namespace HGV.Crystalys.Tests
             var user = client.GetHandler<SteamUser>();
             var friends = client.GetHandler<SteamFriends>();
             var dota = client.GetHandler<DotaGameCoordinatorHandler>();
-            
+
+            var chatTimer = new System.Timers.Timer(30000);
+            chatTimer.AutoReset = true;
+            chatTimer.Elapsed += (s,e) => 
+            {
+                var chanel = dota.ChatChannels.FirstOrDefault();
+                if(chanel is not null)
+                {
+                    dota.SendChannelMessage(chanel.channel_id, "Hello! I accept following commands: START, STOP, FLIP, SHUFFLE");
+                }
+            };
+
             var callbacks = new CallbackManager(client);
             callbacks.Subscribe<SteamClient.ConnectedCallback>((_) =>
             {
@@ -71,7 +82,7 @@ namespace HGV.Crystalys.Tests
                 user.LogOn(new SteamUser.LogOnDetails
                 {
                     Username = _provider.UserName,
-                    Password = _provider.Password
+                    Password = _provider.Password,
                 });
             });
             callbacks.Subscribe<SteamUser.LoggedOffCallback>((_) =>
@@ -79,6 +90,8 @@ namespace HGV.Crystalys.Tests
                 _logger.LogInformation($"Logged Off Reason: {Enum.GetName(_.Result.GetType(), _.Result)}");
 
                 friends.SetPersonaState(EPersonaState.Offline);
+
+                chatTimer.Stop();
 
                 client.Disconnect();
             });
@@ -88,37 +101,34 @@ namespace HGV.Crystalys.Tests
                 _logger.LogInformation($"Disconnected; User Initiated: {_.UserInitiated}");
 
                 if (_.UserInitiated == false)
-                {
                     client.Connect();
-                }
+                else
+                    _cts.Cancel();
             });
 
-            callbacks.Subscribe<SteamUser.LoggedOnCallback>(async (_) => 
+            callbacks.Subscribe<SteamUser.LoggedOnCallback>(async (_) =>
             {
                 _logger.LogInformation($"LoggedOn; Result: {Enum.GetName(_.Result.GetType(), _.Result)}");
 
                 if (_.Result != EResult.OK)
                     return;
 
+                _logger.LogInformation("Set Persona Status to Online...");
+
                 friends.SetPersonaState(EPersonaState.Online);
 
                 await dota.Start();
             });
-
-            callbacks.Subscribe<GCWelcomeCallback>(async (_) =>
+            callbacks.Subscribe<GCWelcomeCallback>((_) =>
             {
-                _logger.LogInformation("Dota Started...");
-
-                await Task.Delay(TimeSpan.FromSeconds(10));
-
-                if (dota.Lobby != null)
-                    return;
-
+                _logger.LogInformation("Dota Started!");
                 _logger.LogInformation("Creating Lobby...");
+
+                var key = Guid.NewGuid().ToString().Substring(0, 8);
 
                 var details = new CMsgPracticeLobbySetDetails
                 {
-                    game_name = "TEST",
+                    game_name = $"HGV TEST {key}",
                     pass_key = "789",
                     server_region = 2,
                     game_mode = 18,
@@ -136,72 +146,66 @@ namespace HGV.Crystalys.Tests
                     shuffle_draft_order = false
                 };
                 details.requested_hero_ids.AddRange(new List<uint> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 });
+
                 dota.CreateLobby(details);
             });
 
-            callbacks.Subscribe<PracticeLobbySnapshot>((_) =>
+            callbacks.Subscribe<PracticeLobbyCreated>((_) =>
             {
-                if(_.initialization)
-                {
-                    _logger.LogInformation("Lobby Active!");
-                    _logger.LogInformation("Kicking Bot From Slot...");
-                    dota.KickPlayerFromLobbyTeam(client.SteamID.AccountID);
+                _logger.LogInformation("Lobby Active!");
 
-                    _logger.LogInformation("Joining Chat Channel");
-                    var name = $"Lobby_{dota.Lobby.lobby_id}";
-                    dota.JoinChatChannel(name, DOTAChatChannelType_t.DOTAChannelType_Lobby);
-                }
-                else
-                {
-                    _logger.LogInformation("Lobby Snapshot...");
-                }
-                
+                _logger.LogInformation("Kicking Bot From Slot...");
+                dota.KickPlayerFromLobbyTeam(client.SteamID.AccountID);
+
+                _logger.LogInformation("Joining Chat Channel");
+                var name = $"Lobby_{dota.Lobby.lobby_id}";
+                dota.JoinChatChannel(name, DOTAChatChannelType_t.DOTAChannelType_Lobby);
             });
-
-            callbacks.Subscribe<JoinChatChannelResponse>((_) => 
+            callbacks.Subscribe<JoinChatChannelResponse>((_) =>
             {
-                _logger.LogInformation("Joined Chat Channel!");
-                _logger.LogInformation("Sending Welcome Message...");
+                var response = _.result;
+                if (response.result != CMsgDOTAJoinChatChannelResponse.Result.JOIN_SUCCESS)
+                {
+                    var reason = Enum.GetName(typeof(CMsgDOTAJoinChatChannelResponse.Result), response.result);
+                    _logger.LogError($"Failed to join chat: {reason}");
+                    _cts.Cancel();
+                    return;
+                }
 
-                dota.SendChannelMessage(_.result.channel_id, "Hello World");
+                _logger.LogInformation("Joined Chat Channel!");
+
+                _logger.LogInformation("Sending Welcome Message...");
+                dota.SendChannelMessage(response.channel_id, "Hello World! ");
+
+                _logger.LogInformation("Start Chat Loop");
+                chatTimer.Start();
             });
 
             callbacks.Subscribe<ChatMessage>(async (_) =>
             {
-                // _.result.account_id
-                if(_.result.text == "START")
+                switch(_.result.text.ToUpper())
                 {
-                    _logger.LogInformation("Lunching Game....");
-                    dota.LaunchLobby();
-
-                    await Task.Delay(TimeSpan.FromSeconds(10));
-
-                    _logger.LogInformation("Leaving Lobby...");
-                    dota.LeaveLobby();
-
-                    await Task.Delay(TimeSpan.FromSeconds(10));
-
-                    _logger.LogInformation("Disconnect...");
-                    dota.Stop();
-                    client.Disconnect();
-
-                    _cts.Cancel();
+                    case "START":
+                        await StartMatch(dota);
+                        break;
+                    case "STOP":
+                        await StopTest(dota);
+                        break;
+                    case "FLIP":
+                        dota.PracticeLobbyFlip();
+                        break;
+                    case "SHUFFLE":
+                        dota.PracticeLobbyShuffle();
+                        break;
+                    default:
+                        _logger.LogInformation($"Chatter: user {_.result.persona_name} said: {_.result.text}");
+                        break;
                 }
-                else if (_.result.text == "STOP")
-                {
-                    _logger.LogInformation("Destroy Lobby...");
-                    dota.DestroyLobby();
-
-                    await Task.Delay(TimeSpan.FromSeconds(10));
-
-                    _logger.LogInformation("Disconnect...");
-                    dota.Stop();
-                    client.Disconnect();
-                }
-                else
-                {
-                    _logger.LogInformation("Chatter...");
-                }
+            });
+            callbacks.Subscribe<PracticeLobbySnapshot>((_) =>
+            {
+                var members = _.lobby.all_members.Select(_ => _.name).ToList();
+                _logger.LogInformation($"Practice Lobby Updated! Members: {string.Join(", ", members)}");
             });
 
             client.Connect();
@@ -210,8 +214,50 @@ namespace HGV.Crystalys.Tests
             {
                 callbacks.RunWaitAllCallbacks(TimeSpan.FromSeconds(1));
             }
-
         }
+
+        private async Task StartMatch(DotaGameCoordinatorHandler dota)
+        {
+            _logger.LogInformation("Count Down....");
+
+            var chanel = dota.ChatChannels.Where(_ => _.channel_type == DOTAChatChannelType_t.DOTAChannelType_Lobby).FirstOrDefault();
+            for (int i = 3; i > 0; i--)
+            {
+                dota.SendChannelMessage(chanel.channel_id, $"{i}");
+                await Task.Delay(TimeSpan.FromSeconds(1));
+            }
+
+            _logger.LogInformation("Lunching Game....");
+            dota.LaunchLobby();
+
+            await Task.Delay(TimeSpan.FromSeconds(10));
+
+            _logger.LogInformation("Leaving Lobby...");
+            dota.LeaveLobby();
+
+            await Task.Delay(TimeSpan.FromSeconds(10));
+
+            _logger.LogInformation("Stoping Dota...");
+            dota.Stop();
+
+            _logger.LogInformation("Disconnect...");
+            dota.SteamClient.Disconnect();
+        }
+
+        private async Task StopTest(DotaGameCoordinatorHandler dota)
+        {
+            _logger.LogInformation("Destroy Lobby...");
+            dota.DestroyLobby();
+
+            await Task.Delay(TimeSpan.FromSeconds(10));
+
+            _logger.LogInformation("Stoping Dota...");
+            dota.Stop();
+
+            _logger.LogInformation("Disconnect...");
+            dota.SteamClient.Disconnect();
+        }
+
 
         public Task StopAsync(CancellationToken cancellationToken)
         {

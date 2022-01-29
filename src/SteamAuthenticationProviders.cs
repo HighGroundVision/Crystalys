@@ -40,4 +40,16 @@ namespace HGV.Crystalys
         public string UserName { get; private set; }
         public string Password { get; private set; }
     }
+
+    public class TestAuthenticationProvider : ISteamAuthenticationProvider
+    {
+        public TestAuthenticationProvider(string username, string password)
+        {
+            this.UserName = username ?? throw new ArgumentNullException("Missing Username Authentication Option");
+            this.Password = password ?? throw new ArgumentNullException("Missing Password Authentication Option");
+        }
+
+        public string UserName { get; private set; }
+        public string Password { get; private set; }
+    }
 }
