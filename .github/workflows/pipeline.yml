@@ -31,13 +31,13 @@ jobs:
       - name: Setup .NET Core
         uses: actions/setup-dotnet@v1
         with:
-          dotnet-version: 3.1.301
+          dotnet-version: 6.0
       - name: Restore
         run: dotnet restore
       - name: Build
         run: dotnet build -c Release --no-restore
       - name: Pack
-        run: dotnet pack -v normal -c Release --no-restore --include-symbols --include-source -p:PackageVersion="1.0.$GITHUB_RUN_ID" src/$PROJECT_NAME.*proj
+        run: dotnet pack -v normal -c Release --no-restore --include-symbols --include-source -p:PackageVersion="2.0.$GITHUB_RUN_ID" src/$PROJECT_NAME.*proj
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
@@ -88,5 +88,3 @@ jobs:
           done
       - name: Push to NuGet Feed
         run: dotnet nuget push ./nupkg/*.nupkg --source $NUGET_FEED --skip-duplicate --api-key $NUGET_KEY
-
-      
