@@ -5,7 +5,9 @@ using SteamKit2.GC.Dota.Internal;
 using SteamKit2.Internal;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Timers;
 
@@ -41,9 +43,12 @@ namespace HGV.Crystalys
             MapLocationStates = new Dictionary<int, CSODOTAMapLocationState>(2); // Generally this seems to be 2
             ChatChannels = new List<CMsgDOTAJoinChatChannelResponse>(1); // Lobby
 
+            this.Lobby = null;
+            this.AbilityDraftLobbyDetails = null;
+
             _gcConnectTimer = new Timer(30000);
             _gcConnectTimer.AutoReset = true;
-            _gcConnectTimer.Elapsed += (s,e) => SayHello();
+            _gcConnectTimer.Elapsed += (s, e) => SayHello();
         }
 
         /// <summary>
@@ -60,7 +65,7 @@ namespace HGV.Crystalys
         /// Is the GC ready?
         /// </summary>
         public bool Ready { get; private set; }
-        
+
         /// <summary>
         /// The underlying SteamClient.
         /// </summary>
@@ -71,6 +76,7 @@ namespace HGV.Crystalys
         /// </summary>
         /// <value>The lobby.</value>
         public CSODOTALobby Lobby { get; private set; }
+        private CMsgPracticeLobbySetDetails.AbilityDraftSpecificDetails AbilityDraftLobbyDetails { get; set; } 
 
         /// <summary>
         /// Econ items.
@@ -92,6 +98,12 @@ namespace HGV.Crystalys
         /// </summary>
         public List<CMsgDOTAJoinChatChannelResponse> ChatChannels { get; private set; }
 
+        private static void CopyProperties<T>(T dest, T src)
+        {
+            foreach (PropertyDescriptor item in TypeDescriptor.GetProperties(src))
+                item.SetValue(dest, item.GetValue(src));
+        }
+
         /// <summary>
         /// Sends a game coordinator message.
         /// </summary>
@@ -99,11 +111,20 @@ namespace HGV.Crystalys
         public void Send(IClientGCMsg msg)
         {
             var clientMsg = new ClientMsgProtobuf<CMsgGCClient>(EMsg.ClientToGC);
-
             clientMsg.Body.msgtype = MsgUtil.MakeGCMsg(msg.MsgType, msg.IsProto);
             clientMsg.Body.appid = (uint)GameId;
-
             clientMsg.Body.payload = msg.Serialize();
+
+            Client.Send(clientMsg);
+        }
+
+        public void Send(IClientGCMsg msg, JobID id)
+        {
+            var clientMsg = new ClientMsgProtobuf<CMsgGCClient>(EMsg.ClientToGC);
+            clientMsg.Body.msgtype = MsgUtil.MakeGCMsg(msg.MsgType, msg.IsProto);
+            clientMsg.Body.appid = (uint)GameId;
+            clientMsg.Body.payload = msg.Serialize();
+            clientMsg.SourceJobID = id;
 
             Client.Send(clientMsg);
         }
@@ -240,7 +261,93 @@ namespace HGV.Crystalys
             if (string.IsNullOrWhiteSpace(create.Body.search_key))
                 create.Body.search_key = "";
 
+            this.AbilityDraftLobbyDetails = details.ability_draft_specific_details;
+
             Send(create);
+        }
+
+        /// <summary>
+        /// Shuffle the current lobby
+        /// </summary>
+        public CMsgPracticeLobbySetDetails GetLobbyDetails()
+        {
+            if (this.Lobby is null)
+                throw new InvalidOperationException("Can not update a looby that dose not exist");
+
+            var details = new CMsgPracticeLobbySetDetails()
+            {
+                lobby_id = this.Lobby.lobby_id,
+                game_name = this.Lobby.game_name,
+                pass_key = this.Lobby.pass_key,
+                server_region = this.Lobby.server_region,
+                game_mode = this.Lobby.game_mode,
+                allow_cheats = this.Lobby.allow_cheats,
+                fill_with_bots = this.Lobby.fill_with_bots,
+                allow_spectating = this.Lobby.allow_spectating,
+                dota_tv_delay = this.Lobby.dota_tv_delay,
+                pause_setting = this.Lobby.pause_setting,
+                game_version = this.Lobby.game_version,
+                visibility = this.Lobby.visibility,
+            };
+
+            if (Lobby.team_details != null)
+                details.team_details.AddRange(this.Lobby.team_details);
+
+            //if(this.AbilityDraftLobbyDetails != null)
+            //    details.ability_draft_specific_details = this.AbilityDraftLobbyDetails;
+
+            if (this.Lobby.requested_hero_ids != null)
+                details.requested_hero_ids.AddRange(this.Lobby.requested_hero_ids);
+
+            return details;
+        }
+
+
+        /// <summary>
+        /// Change the details of an existing lobby.
+        /// </summary>
+        /// <param name="details">Lobby details overrides.</param>
+        public void SetLobbyDetails(CMsgPracticeLobbySetDetails details)
+        {
+            var update = new ClientGCMsgProtobuf<CMsgPracticeLobbySetDetails>((uint)EDOTAGCMsg.k_EMsgGCPracticeLobbySetDetails);
+
+            // there's no way to pass a pre-allocated body, so copy the params
+            update.Body.allchat = details.allchat;
+            update.Body.allow_cheats = details.allow_cheats;
+            update.Body.allow_spectating = details.allow_spectating;
+            update.Body.bot_difficulty_dire = details.bot_difficulty_dire;
+            update.Body.bot_difficulty_radiant = details.bot_difficulty_radiant;
+            update.Body.bot_dire = details.bot_dire;
+            update.Body.bot_radiant = details.bot_radiant;
+            update.Body.dire_series_wins = details.dire_series_wins;
+            update.Body.dota_tv_delay = details.dota_tv_delay;
+            update.Body.fill_with_bots = details.fill_with_bots;
+            update.Body.game_mode = details.custom_difficulty;
+            update.Body.game_name = details.game_name;
+            update.Body.game_version = details.game_version;
+            update.Body.lobby_id = details.lobby_id;
+            update.Body.pass_key = details.pass_key;
+            update.Body.pause_setting = details.pause_setting;
+            update.Body.server_region = details.server_region;
+            update.Body.visibility = details.visibility;
+            //update.Body.leagueid = details.leagueid;
+            //update.Body.previous_match_override = details.previous_match_override;
+            //update.Body.radiant_series_wins = details.radiant_series_wins;
+            //update.Body.selection_priority_rules = details.selection_priority_rules;
+            //update.Body.series_type = details.series_type;
+            //update.Body.cm_pick = details.cm_pick;
+
+            update.Body.ability_draft_specific_details = details.ability_draft_specific_details;
+            //if(details.ability_draft_specific_details != null)
+            //update.Body.ability_draft_specific_details = details.ability_draft_specific_details;
+
+            if (details.team_details != null)
+                update.Body.team_details.AddRange(details.team_details);
+
+            if (details.requested_hero_ids != null)
+                update.Body.requested_hero_ids.AddRange(details.requested_hero_ids);
+
+            Send(update);
         }
 
 
@@ -300,6 +407,7 @@ namespace HGV.Crystalys
             var joinChannel = new ClientGCMsgProtobuf<CMsgDOTAJoinChatChannel>((uint)EDOTAGCMsg.k_EMsgGCJoinChatChannel);
             joinChannel.Body.channel_name = name;
             joinChannel.Body.channel_type = type;
+
             Send(joinChannel);
         }
 
@@ -363,10 +471,25 @@ namespace HGV.Crystalys
         /// <summary>
         /// Shuffle the current lobby
         /// </summary>
-        public void PracticeLobbyShuffle()
+        public void PracticeLobbyShuffleTeam()
         {
             var shuffle = new ClientGCMsgProtobuf<CMsgBalancedShuffleLobby>((uint)EDOTAGCMsg.k_EMsgGCBalancedShuffleLobby);
             Send(shuffle);
+        }
+
+        /// <summary>
+        /// Shuffle the current lobby
+        /// </summary>
+        public void PracticeLobbyShuffleDraftOrder(bool value)
+        {
+            var details = this.GetLobbyDetails();
+
+            details.ability_draft_specific_details = new CMsgPracticeLobbySetDetails.AbilityDraftSpecificDetails()
+            {
+                shuffle_draft_order = value
+            };
+
+            this.SetLobbyDetails(details);
         }
 
         /// <summary>
@@ -376,6 +499,23 @@ namespace HGV.Crystalys
         {
             var flip = new ClientGCMsgProtobuf<CMsgFlipLobbyTeams>((uint)EDOTAGCMsg.k_EMsgGCFlipLobbyTeams);
             Send(flip);
+        }
+
+
+        /// <summary>
+        /// Set hero roster for lobby
+        /// </summary>
+        public void PracticeLobbySetRoster(IReadOnlyList<uint> roster)
+        {
+            var details = this.GetLobbyDetails();
+            details.requested_hero_ids.Clear();
+            details.requested_hero_ids.AddRange(roster);
+            this.SetLobbyDetails(details);
+        }
+
+        public void PracticeLobbySetRoster(params uint[] roster)
+        {
+            this.PracticeLobbySetRoster(roster.ToList());
         }
 
 
@@ -508,6 +648,7 @@ namespace HGV.Crystalys
             if (Lobby != null && dest.Body.type_id == (int)CSOTypes.LOBBY)
             {
                 Lobby = null;
+                this.AbilityDraftLobbyDetails = null;
                 Client.PostCallback(new PracticeLobbyLeave(null));
             }
         }
@@ -518,6 +659,7 @@ namespace HGV.Crystalys
             if (Lobby != null && unSub.Body.owner_soid.id == Lobby.lobby_id)
             {
                 Lobby = null;
+                this.AbilityDraftLobbyDetails = null;
                 Client.PostCallback(new PracticeLobbyLeave(unSub.Body));
             }
             else

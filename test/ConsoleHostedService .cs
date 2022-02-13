@@ -56,22 +56,13 @@ namespace HGV.Crystalys.Tests
             var client = new SteamClient();
             client.AddHandler(new DotaGameCoordinatorHandler(client));
 
-            var apps = client.GetHandler<SteamApps>();
-            var steam = client.GetHandler<SteamGameCoordinator>();
+            //var apps = client.GetHandler<SteamApps>();
+            //var steam = client.GetHandler<SteamGameCoordinator>();
             var user = client.GetHandler<SteamUser>();
             var friends = client.GetHandler<SteamFriends>();
             var dota = client.GetHandler<DotaGameCoordinatorHandler>();
 
-            var chatTimer = new System.Timers.Timer(30000);
-            chatTimer.AutoReset = true;
-            chatTimer.Elapsed += (s,e) => 
-            {
-                var chanel = dota.ChatChannels.FirstOrDefault();
-                if(chanel is not null)
-                {
-                    dota.SendChannelMessage(chanel.channel_id, "Hello! I accept following commands: START, STOP, FLIP, SHUFFLE");
-                }
-            };
+
 
             var callbacks = new CallbackManager(client);
             callbacks.Subscribe<SteamClient.ConnectedCallback>((_) =>
@@ -90,8 +81,6 @@ namespace HGV.Crystalys.Tests
                 _logger.LogInformation($"Logged Off Reason: {Enum.GetName(_.Result.GetType(), _.Result)}");
 
                 friends.SetPersonaState(EPersonaState.Offline);
-
-                chatTimer.Stop();
 
                 client.Disconnect();
             });
@@ -138,14 +127,13 @@ namespace HGV.Crystalys.Tests
                     dota_tv_delay = LobbyDotaTVDelay.LobbyDotaTV_300,
                     pause_setting = LobbyDotaPauseSetting.LobbyDotaPauseSetting_Unlimited,
                     game_version = DOTAGameVersion.GAME_VERSION_CURRENT,
-                    visibility = DOTALobbyVisibility.DOTALobbyVisibility_Public,
-
+                    visibility = DOTALobbyVisibility.DOTALobbyVisibility_Public
                 };
-                details.ability_draft_specific_details = new CMsgPracticeLobbySetDetails.AbilityDraftSpecificDetails
-                {
-                    shuffle_draft_order = false
-                };
-                details.requested_hero_ids.AddRange(new List<uint> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 });
+                //details.ability_draft_specific_details = new CMsgPracticeLobbySetDetails.AbilityDraftSpecificDetails
+                //{
+                //    shuffle_draft_order = false
+                //};
+                //details.requested_hero_ids.AddRange(new List<uint> { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12 });
 
                 dota.CreateLobby(details);
             });
@@ -160,6 +148,7 @@ namespace HGV.Crystalys.Tests
                 _logger.LogInformation("Joining Chat Channel");
                 var name = $"Lobby_{dota.Lobby.lobby_id}";
                 dota.JoinChatChannel(name, DOTAChatChannelType_t.DOTAChannelType_Lobby);
+
             });
             callbacks.Subscribe<JoinChatChannelResponse>((_) =>
             {
@@ -178,13 +167,16 @@ namespace HGV.Crystalys.Tests
                 dota.SendChannelMessage(response.channel_id, "Hello World! ");
 
                 _logger.LogInformation("Start Chat Loop");
-                chatTimer.Start();
             });
 
             callbacks.Subscribe<ChatMessage>(async (_) =>
             {
-                switch(_.result.text.ToUpper())
+                var cmd = _.result.text.ToUpper();
+                switch (cmd)
                 {
+                    case "HELP":
+                        SendHelpMessage(dota);
+                        break;
                     case "START":
                         await StartMatch(dota);
                         break;
@@ -194,16 +186,29 @@ namespace HGV.Crystalys.Tests
                     case "FLIP":
                         dota.PracticeLobbyFlip();
                         break;
-                    case "SHUFFLE":
-                        dota.PracticeLobbyShuffle();
+                    case "SHUFFLE TEAMS":
+                        dota.PracticeLobbyShuffleTeam();
+                        break;
+                    case "SHUFFLE PLAYERS":
+                        dota.PracticeLobbyShuffleDraftOrder(true);
                         break;
                     default:
                         _logger.LogInformation($"Chatter: user {_.result.persona_name} said: {_.result.text}");
                         break;
                 }
+
+                if(cmd.StartsWith("SET HEROES"))
+                {
+                    var collection = cmd.Replace("SET HEROES", "");
+                    var roster = collection.Split(",").Select(_ => uint.Parse(_)).ToList();
+                    if(roster.Count == 12)
+                        dota.PracticeLobbySetRoster(roster);
+                }
             });
             callbacks.Subscribe<PracticeLobbySnapshot>((_) =>
             {
+                SendHelpMessage(dota);
+
                 var members = _.lobby.all_members.Select(_ => _.name).ToList();
                 _logger.LogInformation($"Practice Lobby Updated! Members: {string.Join(", ", members)}");
             });
@@ -213,6 +218,19 @@ namespace HGV.Crystalys.Tests
             while (_cts.Token.IsCancellationRequested == false)
             {
                 callbacks.RunWaitAllCallbacks(TimeSpan.FromSeconds(1));
+            }
+        }
+
+        private void SendHelpMessage(DotaGameCoordinatorHandler dota)
+        {
+            _logger.LogInformation("Sending Help Message to Lobby Chat Channel (if it exists)");
+
+            var chanel = dota.ChatChannels.FirstOrDefault();
+            if (chanel is not null)
+            {
+                dota.SendChannelMessage(chanel.channel_id, "Hello!");
+                dota.SendChannelMessage(chanel.channel_id, "I accept following commands:");
+                dota.SendChannelMessage(chanel.channel_id, "START, STOP, FLIP, SHUFFLE TEAMS, SHUFFLE PLAYERS");
             }
         }
 
